@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre QR Code généré</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3aaa35;
+        }
+        h1 {
+            color: #022851;
+            margin: 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .qr-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3aaa35;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .qr-content {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            margin: 10px 0;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+        }
+        .attachment-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .attachment-info h3 {
+            color: #155724;
+            margin-top: 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3aaa35;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .icon {
+            font-size: 48px;
+            color: #3aaa35;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="icon">📱</div>
+            <h1>Votre QR Code est prêt !</h1>
+            <p class="subtitle">Généré avec succès</p>
+        </div>
+
+        <p>Bonjour <strong th:text="${userName}">Nom de l'utilisateur</strong>,</p>
+
+        <p>Votre QR Code a été généré avec succès ! Vous trouverez ci-dessous les détails de votre QR Code.</p>
+
+        <div class="qr-info">
+            <h3>Contenu du QR Code :</h3>
+            <div class="qr-content" th:text="${qrContent}">
+                Contenu du QR code ici
+            </div>
+        </div>
+
+        <div class="attachment-info">
+            <h3>📎 Fichier joint</h3>
+            <p>Votre QR Code est disponible en pièce jointe de cet email au format PNG.</p>
+            <p>Vous pouvez le télécharger et l'utiliser selon vos besoins.</p>
+        </div>
+
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">💡 Conseils d'utilisation :</h3>
+            <ul style="color: #856404;">
+                <li>Assurez-vous que le QR Code est bien visible et non déformé lors de l'impression</li>
+                <li>Testez le QR Code avec votre smartphone avant utilisation</li>
+                <li>Gardez une copie de sauvegarde du fichier</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="#" class="btn">Accéder à mon espace</a>
+        </div>
+
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement par <span th:text="${appName}">SSAC QR Code App</span></p>
+            <p>Vous pouvez retrouver tous vos QR Codes dans votre espace personnel.</p>
+        </div>
+    </div>
+</body>
+</html>
+

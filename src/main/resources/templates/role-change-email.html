@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modification de votre rôle</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ffc107;
+        }
+        h1 {
+            color: #022851;
+            margin: 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .role-change {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .role-badge {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+        .role-old {
+            background-color: #6c757d;
+            color: white;
+        }
+        .role-new {
+            background-color: #3aaa35;
+            color: white;
+        }
+        .arrow {
+            font-size: 20px;
+            color: #ffc107;
+            margin: 0 10px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3aaa35;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .icon {
+            font-size: 48px;
+            color: #ffc107;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="icon">🔄</div>
+            <h1>Modification de votre rôle</h1>
+            <p class="subtitle">Votre niveau d'accès a été mis à jour</p>
+        </div>
+
+        <p>Bonjour <strong th:text="${userName}">Nom de l'utilisateur</strong>,</p>
+
+        <p>Nous vous informons que votre rôle dans l'application a été modifié par un administrateur.</p>
+
+        <div class="role-change">
+            <h3>Changement de rôle :</h3>
+            <div style="text-align: center; margin: 20px 0;">
+                <span class="role-badge role-old" th:text="${oldRole}">Ancien rôle</span>
+                <span class="arrow">→</span>
+                <span class="role-badge role-new" th:text="${newRole}">Nouveau rôle</span>
+            </div>
+        </div>
+
+        <div th:if="${newRole == 'ADMIN'}" style="background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 5px; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">🔑 Privilèges Administrateur :</h3>
+            <ul style="color: #0c5460;">
+                <li>Accès complet à l'interface d'administration</li>
+                <li>Création et gestion des comptes utilisateurs</li>
+                <li>Modification des rôles et statuts</li>
+                <li>Visualisation de toutes les actions</li>
+                <li>Suppression des QR codes</li>
+            </ul>
+        </div>
+
+        <div th:if="${newRole == 'MANAGER'}" style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">👥 Privilèges Manager :</h3>
+            <ul style="color: #856404;">
+                <li>Accès à l'interface d'administration (lecture seule)</li>
+                <li>Visualisation des actions des utilisateurs</li>
+                <li>Génération de QR codes</li>
+            </ul>
+        </div>
+
+        <div th:if="${newRole == 'USER'}" style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">👤 Privilèges Utilisateur :</h3>
+            <ul style="color: #155724;">
+                <li>Génération de QR codes personnalisés</li>
+                <li>Gestion de votre profil personnel</li>
+                <li>Consultation de votre historique d'actions</li>
+            </ul>
+        </div>
+
+        <p>Ces modifications prennent effet immédiatement. Vous devrez peut-être vous reconnecter pour voir les changements.</p>
+
+        <div style="text-align: center;">
+            <a href="#" class="btn">Se connecter</a>
+        </div>
+
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement par <span th:text="${appName}">SSAC QR Code App</span></p>
+            <p>Si vous avez des questions concernant ce changement, contactez l'administrateur.</p>
+        </div>
+    </div>
+</body>
+</html>
+

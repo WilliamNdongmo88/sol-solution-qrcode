@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modification du statut de votre compte</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+        }
+        .header.active {
+            border-bottom: 2px solid #28a745;
+        }
+        .header.inactive {
+            border-bottom: 2px solid #dc3545;
+        }
+        h1 {
+            color: #022851;
+            margin: 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .status-info {
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .status-active {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .status-inactive {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 10px 0;
+            display: inline-block;
+        }
+        .badge-active {
+            background-color: #28a745;
+            color: white;
+        }
+        .badge-inactive {
+            background-color: #dc3545;
+            color: white;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3aaa35;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .icon-active {
+            color: #28a745;
+        }
+        .icon-inactive {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header" th:class="${isActive} ? 'header active' : 'header inactive'">
+            <div class="icon" th:class="${isActive} ? 'icon-active' : 'icon-inactive'">
+                <span th:if="${isActive}">✅</span>
+                <span th:unless="${isActive}">❌</span>
+            </div>
+            <h1 th:text="${isActive} ? 'Compte activé' : 'Compte désactivé'">Statut du compte</h1>
+            <p class="subtitle" th:text="${isActive} ? 'Votre accès a été rétabli' : 'Votre accès a été suspendu'">Modification du statut</p>
+        </div>
+
+        <p>Bonjour <strong th:text="${userName}">Nom de l'utilisateur</strong>,</p>
+
+        <p th:if="${isActive}">
+            Bonne nouvelle ! Votre compte a été réactivé par un administrateur. 
+            Vous pouvez maintenant vous reconnecter et utiliser toutes les fonctionnalités de l'application.
+        </p>
+
+        <p th:unless="${isActive}">
+            Nous vous informons que votre compte a été temporairement désactivé par un administrateur. 
+            Vous ne pourrez plus vous connecter à l'application jusqu'à ce que votre compte soit réactivé.
+        </p>
+
+        <div class="status-info" th:class="${isActive} ? 'status-active' : 'status-inactive'">
+            <h3>Statut actuel de votre compte :</h3>
+            <div class="status-badge" th:class="${isActive} ? 'badge-active' : 'badge-inactive'">
+                <span th:if="${isActive}">🟢 ACTIF</span>
+                <span th:unless="${isActive}">🔴 INACTIF</span>
+            </div>
+        </div>
+
+        <div th:if="${isActive}" style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">🎉 Votre accès est rétabli :</h3>
+            <ul style="color: #155724;">
+                <li>Vous pouvez vous connecter normalement</li>
+                <li>Toutes vos données sont préservées</li>
+                <li>Vos QR codes précédents sont toujours disponibles</li>
+                <li>Vous pouvez générer de nouveaux QR codes</li>
+            </ul>
+        </div>
+
+        <div th:unless="${isActive}" style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #721c24; margin-top: 0;">⚠️ Restrictions d'accès :</h3>
+            <ul style="color: #721c24;">
+                <li>Connexion à l'application impossible</li>
+                <li>Génération de nouveaux QR codes suspendue</li>
+                <li>Accès aux fonctionnalités bloqué</li>
+                <li>Vos données restent sauvegardées</li>
+            </ul>
+        </div>
+
+        <div th:if="${isActive}" style="text-align: center;">
+            <a href="#" class="btn">Se connecter maintenant</a>
+        </div>
+
+        <div th:unless="${isActive}" style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0; text-align: center;">
+            <p style="color: #856404; margin: 0;">
+                <strong>Besoin d'aide ?</strong><br>
+                Si vous pensez que cette désactivation est une erreur ou si vous souhaitez plus d'informations, 
+                veuillez contacter l'administrateur de l'application.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement par <span th:text="${appName}">SSAC QR Code App</span></p>
+            <p>Pour toute question, contactez l'administrateur de l'application.</p>
+        </div>
+    </div>
+</body>
+</html>
+

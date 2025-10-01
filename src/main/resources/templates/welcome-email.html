@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenue dans SSAC</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3aaa35;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #022851;
+            margin: 0;
+            font-size: 24px;
+        }
+        .welcome-text {
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .credentials {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3aaa35;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .credential-item {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .credential-label {
+            font-weight: 600;
+            color: #022851;
+        }
+        .credential-value {
+            font-family: 'Courier New', monospace;
+            background-color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            border: 1px solid #dee2e6;
+        }
+        .code-access {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #3aaa35;
+        }
+        .instructions {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            color: #0c5460;
+            margin-top: 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3aaa35;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .role-badge {
+            background-color: #3aaa35;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Bienvenue dans <span th:text="${appName}">SSAC QR Code App</span></h1>
+            <p class="welcome-text">Votre compte a été créé avec succès</p>
+        </div>
+
+        <p>Bonjour <strong th:text="${userName}">Nom de l'utilisateur</strong>,</p>
+
+        <p>Nous sommes ravis de vous accueillir dans notre application de génération de QR codes. Votre compte a été créé avec le rôle : <span class="role-badge" th:text="${role}">USER</span></p>
+
+        <div class="credentials">
+            <h3>Vos informations de connexion :</h3>
+            
+            <div class="credential-item">
+                <span class="credential-label">Email :</span>
+                <span class="credential-value" th:text="${userEmail}">email@example.com</span>
+            </div>
+
+            <div class="credential-item" th:if="${codeAcces}">
+                <span class="credential-label">Code d'accès :</span>
+                <span class="credential-value code-access" th:text="${codeAcces}">ABC12345</span>
+            </div>
+
+            <div class="credential-item" th:if="${tempPassword}">
+                <span class="credential-label">Mot de passe temporaire :</span>
+                <span class="credential-value" th:text="${tempPassword}">TempPassword123</span>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>Instructions de connexion :</h3>
+            <div th:if="${role == 'USER'}">
+                <p><strong>Pour les utilisateurs :</strong></p>
+                <ul>
+                    <li>Utilisez votre email et votre code d'accès pour vous connecter</li>
+                    <li>Vous pourrez générer des QR codes et gérer votre profil</li>
+                </ul>
+            </div>
+            <div th:if="${role == 'ADMIN' or role == 'MANAGER'}">
+                <p><strong>Pour les administrateurs/managers :</strong></p>
+                <ul>
+                    <li>Utilisez votre email et votre mot de passe temporaire pour vous connecter</li>
+                    <li>Vous aurez accès à l'interface d'administration</li>
+                    <li>Nous vous recommandons de changer votre mot de passe lors de votre première connexion</li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="#" class="btn">Se connecter maintenant</a>
+        </div>
+
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement par <span th:text="${appName}">SSAC QR Code App</span></p>
+            <p>Si vous avez des questions, n'hésitez pas à contacter l'administrateur.</p>
+        </div>
+    </div>
+</body>
+</html>
+
