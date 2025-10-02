@@ -29,7 +29,7 @@ public class PdfService {
     private final PdfMetadataRepository pdfMetadataRepository;
     private final UserActionService userActionService;
 
-    @Value("${app.upload.dir:/home/moncompte/www/uploads/pdfs}")//uploads/pdfs
+    @Value("${app.upload.dir:uploads/pdfs}")
     private String uploadDir;
 
     @Transactional
@@ -53,8 +53,7 @@ public class PdfService {
         }
 
         // Sauvegarde du fichier
-        //String filename = uniqueId + ".pdf";
-        String filename = uniqueId + "-" + file.getOriginalFilename();
+        String filename = uniqueId + ".pdf";
         Path filePath = uploadPath.resolve(filename);
         Files.copy(file.getInputStream(), filePath);
 
@@ -62,9 +61,7 @@ public class PdfService {
         PdfMetadata pdfMetadata = new PdfMetadata();
         pdfMetadata.setUniqueId(uniqueId);
         pdfMetadata.setOriginalFilename(file.getOriginalFilename());
-        //pdfMetadata.setFilePath(filePath.toString());
-        //Le fichier est stocké dans /uploads/ et sera accessible par https://ton-domaine/uploads/nomfichier.pdf.
-        pdfMetadata.setFilePath("/uploads/" + filename); // accessible via ton domaine
+        pdfMetadata.setFilePath(filePath.toString());
         pdfMetadata.setFileSize(file.getSize());
         pdfMetadata.setUploadDate(LocalDateTime.now());
         pdfMetadata.setContentType(file.getContentType());

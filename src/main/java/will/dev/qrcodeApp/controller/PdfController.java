@@ -35,78 +35,57 @@ public class PdfController {
     private final PdfService pdfService;
     private final PdfMetadataMapper pdfMetadataMapper;
 
-//    @PostMapping("/upload")
-//    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
-//    public ResponseEntity<?> uploadPdf(@AuthenticationPrincipal User user,
-//                                       @RequestParam("file") MultipartFile file) {
-//        try {
-//            Path pdfDir = Paths.get("uploads/pdfs");
-//            if (!Files.exists(pdfDir)) {
-//                Files.createDirectories(pdfDir);
-//            }
-//
-//            // Nom du fichier uploadé (ex: facture_2025.pdf)
-//            String uploadedFileName = file.getOriginalFilename();
-//            if (uploadedFileName == null || uploadedFileName.isBlank()) {
-//                throw new IllegalArgumentException("❌ Nom de fichier invalide.");
-//            }
-//
-//            // Nom sans extension (ex: facture_2025)
-//            String uploadedNameWithoutExt = uploadedFileName.replaceFirst("[.][^.]+$", "");
-//            System.out.println("📤 Nom du fichier uploadé (sans extension) : " + uploadedNameWithoutExt);
-//
-//            // Récupérer tous les fichiers existants dans le dossier
-//            List<String> existingNamesWithoutExt = new ArrayList<>();
-//            try (DirectoryStream<Path> stream = Files.newDirectoryStream(pdfDir, "*.pdf")) {
-//                for (Path existingFile : stream) {
-//                    String existingName = existingFile.getFileName().toString();
-//                    String nameWithoutExt = existingName.replaceFirst("[.][^.]+$", "");
-//                    existingNamesWithoutExt.add(nameWithoutExt);
-//                    System.out.println("📂 Nom de fichier trouvé dans uploads/pdfs : " + nameWithoutExt);
-//                }
-//            }
-//
-//            // Vérification en BD : uploaded + tous ceux déjà présents dans uploads/pdfs
-//            List<String> uniqueIdsToCheck = new ArrayList<>(existingNamesWithoutExt);
-//
-//            for (String unique_id : uniqueIdsToCheck) {
-//                boolean existsInDb = pdfService.existsByUniqueIdAndUploadedFileName(unique_id, uploadedFileName);
-//                if (existsInDb) {
-//                    throw new IllegalArgumentException("❌ Le fichier '" + uploadedFileName + "' existe déjà en base de données.");
-//                }
-//            }
-//
-//            // --- Si tout est bon → upload ---
-//            PdfMetadata pdfMetadata = pdfService.uploadPdf(user, file);
-//            return ResponseEntity.ok(pdfMetadataMapper.pdfMetadataToPdfMetadataDto(pdfMetadata));
-//
-//        } catch (IllegalArgumentException e) {
-//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-//        } catch (IOException e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur IO: " + e.getMessage()));
-//        }
-//    }
-
     @PostMapping("/upload")
-    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
     public ResponseEntity<?> uploadPdf(@AuthenticationPrincipal User user,
                                        @RequestParam("file") MultipartFile file) {
         try {
-            // Appelle ton service métier (local ou S3, selon config)
-            PdfMetadata pdfMetadata = pdfService.uploadPdf(user, file);
+            Path pdfDir = Paths.get("uploads/pdfs");
+            if (!Files.exists(pdfDir)) {
+                Files.createDirectories(pdfDir);
+            }
 
-            // Retourne le DTO vers le front
+            // Nom du fichier uploadé (ex: facture_2025.pdf)
+            String uploadedFileName = file.getOriginalFilename();
+            if (uploadedFileName == null || uploadedFileName.isBlank()) {
+                throw new IllegalArgumentException("❌ Nom de fichier invalide.");
+            }
+
+            // Nom sans extension (ex: facture_2025)
+            String uploadedNameWithoutExt = uploadedFileName.replaceFirst("[.][^.]+$", "");
+            System.out.println("📤 Nom du fichier uploadé (sans extension) : " + uploadedNameWithoutExt);
+
+            // Récupérer tous les fichiers existants dans le dossier
+            List<String> existingNamesWithoutExt = new ArrayList<>();
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(pdfDir, "*.pdf")) {
+                for (Path existingFile : stream) {
+                    String existingName = existingFile.getFileName().toString();
+                    String nameWithoutExt = existingName.replaceFirst("[.][^.]+$", "");
+                    existingNamesWithoutExt.add(nameWithoutExt);
+                    System.out.println("📂 Nom de fichier trouvé dans uploads/pdfs : " + nameWithoutExt);
+                }
+            }
+
+            // Vérification en BD : uploaded + tous ceux déjà présents dans uploads/pdfs
+            List<String> uniqueIdsToCheck = new ArrayList<>(existingNamesWithoutExt);
+
+            for (String unique_id : uniqueIdsToCheck) {
+                boolean existsInDb = pdfService.existsByUniqueIdAndUploadedFileName(unique_id, uploadedFileName);
+                if (existsInDb) {
+                    throw new IllegalArgumentException("❌ Le fichier '" + uploadedFileName + "' existe déjà en base de données.");
+                }
+            }
+
+            // --- Si tout est bon → upload ---
+            PdfMetadata pdfMetadata = pdfService.uploadPdf(user, file);
             return ResponseEntity.ok(pdfMetadataMapper.pdfMetadataToPdfMetadataDto(pdfMetadata));
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    Map.of("error", "Erreur IO: " + e.getMessage())
-            );
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur IO: " + e.getMessage()));
         }
     }
-
 
     @GetMapping("/view/{pdfUniqueId}")
     public ResponseEntity<Resource> viewPdf(@PathVariable String pdfUniqueId) {
