@@ -80,7 +80,6 @@ public class PdfController {
                 .build();
     }
 
-
     @GetMapping("/info/{pdfUniqueId}")
     @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
     public ResponseEntity<PdfMetadataDto> getPdfInfo(@PathVariable String pdfUniqueId) {
@@ -94,13 +93,15 @@ public class PdfController {
     }
 
     @GetMapping("/text/{pdfUniqueId}")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<String> extractTextFromPdf(@PathVariable String pdfUniqueId) {
         try {
             String text = pdfService.extractTextFromPdf(pdfUniqueId);
             return ResponseEntity.ok().body(text);
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur lors de l'extraction du texte: " + e.getMessage());
@@ -108,15 +109,18 @@ public class PdfController {
     }
 
     @DeleteMapping("/{pdfUniqueId}")
-    @PreAuthorize("hasAnyAuthority(\'ADMIN\', \'MANAGER\') or (hasAuthority(\'USER\') and @pdfService.getPdfMetadata(#pdfUniqueId).get().getUser().getId() == authentication.principal.id)")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER') or (hasAuthority('USER') and @pdfService.getPdfMetadata(#pdfUniqueId).get().getUser().getId() == authentication.principal.id)")
     public ResponseEntity<String> deletePdf(@AuthenticationPrincipal User user, @PathVariable String pdfUniqueId) {
         try {
             pdfService.deletePdf(user, pdfUniqueId);
             return ResponseEntity.ok().body("PDF supprimé avec succès");
+
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur lors de la suppression: " + e.getMessage());
@@ -127,8 +131,11 @@ public class PdfController {
     @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
     public ResponseEntity<List<PdfMetadataDto>> getUserPdfs(@AuthenticationPrincipal User user) {
         List<PdfMetadata> pdfs = pdfService.getUserPdfs(user);
-        return ResponseEntity.ok(pdfs.stream().map(pdfMetadataMapper::pdfMetadataToPdfMetadataDto).collect(Collectors.toList()));
+        return ResponseEntity.ok(pdfs.stream()
+                .map(pdfMetadataMapper::pdfMetadataToPdfMetadataDto)
+                .collect(Collectors.toList()));
     }
+
 }
 
 
