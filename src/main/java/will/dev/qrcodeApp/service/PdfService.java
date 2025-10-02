@@ -1,5 +1,7 @@
 package will.dev.qrcodeApp.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -19,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,55 +31,48 @@ public class PdfService {
 
     private final PdfMetadataRepository pdfMetadataRepository;
     private final UserActionService userActionService;
-
-    @Value("${app.upload.dir:/home/moncompte/www/uploads/pdfs}")//uploads/pdfs
-    private String uploadDir;
+    private final Cloudinary cloudinary;
 
     @Transactional
     public PdfMetadata uploadPdf(User user, MultipartFile file) throws IOException {
-        // Validation du fichier
+        // Vérification du fichier
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("Le fichier est vide");
+            throw new IllegalArgumentException("❌ Le fichier est vide.");
         }
 
         if (!"application/pdf".equals(file.getContentType())) {
-            throw new IllegalArgumentException("Le fichier doit être un PDF");
+            throw new IllegalArgumentException("❌ Seuls les fichiers PDF sont autorisés.");
         }
 
-        // Génération d'un ID unique
+        // Vérifier si le fichier existe déjà pour cet utilisateur
+        if (pdfMetadataRepository.existsByOriginalFilenameAndUser(file.getOriginalFilename(), user)) {
+            throw new IllegalArgumentException("❌ Ce fichier existe déjà pour cet utilisateur.");
+        }
+
+        // Générer un ID unique
         String uniqueId = UUID.randomUUID().toString();
 
-        // Création du répertoire de téléchargement s'il n'existe pas
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
+        // Upload sur Cloudinary
+        Map uploadResult = cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                        "public_id", "pdfs/" + uniqueId,
+                        "resource_type", "auto"
+                )
+        );
 
-        // Sauvegarde du fichier
-        //String filename = uniqueId + ".pdf";
-        String filename = uniqueId + "-" + file.getOriginalFilename();
-        Path filePath = uploadPath.resolve(filename);
-        Files.copy(file.getInputStream(), filePath);
-
-        // Création des métadonnées
+        // Créer les métadonnées
         PdfMetadata pdfMetadata = new PdfMetadata();
         pdfMetadata.setUniqueId(uniqueId);
         pdfMetadata.setOriginalFilename(file.getOriginalFilename());
-        //pdfMetadata.setFilePath(filePath.toString());
-        //Le fichier est stocké dans /uploads/ et sera accessible par https://ton-domaine/uploads/nomfichier.pdf.
-        pdfMetadata.setFilePath("/uploads/" + filename); // accessible via ton domaine
+        pdfMetadata.setFilePath(uploadResult.get("secure_url").toString());
         pdfMetadata.setFileSize(file.getSize());
         pdfMetadata.setUploadDate(LocalDateTime.now());
         pdfMetadata.setContentType(file.getContentType());
         pdfMetadata.setUser(user);
 
-        PdfMetadata savedPdf = pdfMetadataRepository.save(pdfMetadata);
-
-        // Enregistrer l'action d'upload
-        userActionService.logAction(user, UserAction.TypeAction.UPLOAD_PDF,
-                "PDF " + file.getOriginalFilename() + " uploadé par " + user.getEmail());
-
-        return savedPdf;
+        // Sauvegarder en BD
+        return pdfMetadataRepository.save(pdfMetadata);
     }
 
     public Optional<PdfMetadata> getPdfMetadata(String uniqueId) {

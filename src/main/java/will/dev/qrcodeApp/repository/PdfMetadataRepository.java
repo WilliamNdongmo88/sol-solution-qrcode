@@ -33,5 +33,8 @@ public interface PdfMetadataRepository extends JpaRepository<PdfMetadata, Long> 
     boolean existsByUniqueIdAndOriginalFilename(@Param("uniqueId") String uniqueId,
                                                 @Param("uploadedFileName") String uploadedFileName);
 
+    boolean existsByOriginalFilenameAndUser(String originalFilename, User user);
+
+
 }
 
