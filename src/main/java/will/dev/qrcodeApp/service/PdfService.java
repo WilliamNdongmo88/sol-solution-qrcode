@@ -68,15 +68,17 @@ public class PdfService {
                 file.getBytes(),
                 ObjectUtils.asMap(
                         "public_id", "pdfs/" + uniqueId,
-                        "resource_type", "auto"
+                        "resource_type", "image" // raw Obligatoire pour les PDF : auto ou (image, video, raw)
                 )
         );
+        String cloudinaryUrl = (String) uploadResult.get("secure_url");
+        System.out.println("✅ Fichier uploadé sur Cloudinary : " + cloudinaryUrl);
 
         // Créer les métadonnées
         PdfMetadata pdfMetadata = new PdfMetadata();
         pdfMetadata.setUniqueId(uniqueId);
         pdfMetadata.setOriginalFilename(file.getOriginalFilename());
-        pdfMetadata.setFilePath(uploadResult.get("secure_url").toString());
+        pdfMetadata.setFilePath(cloudinaryUrl);
         pdfMetadata.setFileSize(file.getSize());
         pdfMetadata.setUploadDate(LocalDateTime.now());
         pdfMetadata.setContentType(file.getContentType());
