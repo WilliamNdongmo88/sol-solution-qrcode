@@ -6,6 +6,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import will.dev.qrcodeApp.dto.PasswordResetRequest;
 import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.repository.UserRepository;
 
@@ -33,7 +34,6 @@ public class AuthService {
     }
 
     public String authenticate(Authentication authentication) {
-//        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
         User user = (User) authentication.getPrincipal();
         return jwtService.generateToken(user);
     }
