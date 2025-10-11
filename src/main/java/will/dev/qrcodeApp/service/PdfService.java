@@ -30,6 +30,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class PdfService {
+    @Value("${app.upload.dir:uploads/pdfs}")
+    private String uploadDir;
 
     @Value("${cloudinary.cloud-name}")
     private String cloud_name;
@@ -60,19 +62,19 @@ public class PdfService {
             throw new IllegalArgumentException("❌ Ce fichier existe déjà pour cet utilisateur.");
         }
 
-        // Création du répertoire de téléchargement s'il n'existe pas
-//        Path uploadPath = Paths.get(uploadDir);
-//        if (!Files.exists(uploadPath)) {
-//            Files.createDirectories(uploadPath);
-//        }
-//
-//        // Sauvegarde du fichier
-//        String filename = uniqueId + ".pdf";
-//        Path filePath = uploadPath.resolve(filename);
-//        Files.copy(file.getInputStream(), filePath);
-
         // Générer un ID unique
         String uniqueId = UUID.randomUUID().toString();
+
+        // Création du répertoire de téléchargement s'il n'existe pas
+        Path uploadPath = Paths.get(uploadDir);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        // Sauvegarde du fichier
+        String filename = uniqueId + ".pdf";
+        Path filePath = uploadPath.resolve(filename);
+        Files.copy(file.getInputStream(), filePath);
 
         // Upload sur Cloudinary
         Map uploadResult = cloudinary.uploader().upload(
