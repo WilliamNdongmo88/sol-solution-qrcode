@@ -50,19 +50,43 @@ public class PdfController {
         }
     }
 
-    @GetMapping("/view/{pdfUniqueId}")
-    public ResponseEntity<Void> viewPdf(@PathVariable String pdfUniqueId) {
+//    @GetMapping("/view/{pdfUniqueId}")
+//    public ResponseEntity<Void> viewPdf(@PathVariable String pdfUniqueId) {
+//        Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
+//
+//        if (pdfMetadata.isEmpty()) {
+//            return ResponseEntity.notFound().build();
+//        }
+//
+//        // Soit tu rediriges vers l’URL Cloudinary
+//        return ResponseEntity.status(HttpStatus.FOUND)
+//                .location(URI.create(pdfMetadata.get().getFilePath()))
+//                .build();
+//    }
+@GetMapping("/view/{pdfUniqueId}")
+public ResponseEntity<Resource> viewPdf(@PathVariable String pdfUniqueId) {
+    try {
+        File pdfFile = pdfService.getPdfFile(pdfUniqueId);
         Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
 
         if (pdfMetadata.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        // Soit tu rediriges vers l’URL Cloudinary
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(pdfMetadata.get().getFilePath()))
-                .build();
+        Resource resource = new FileSystemResource(pdfFile);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + pdfMetadata.get().getOriginalFilename() + "\"")
+                .body(resource);
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.notFound().build();
+    } catch (IOException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
+}
+
 
     @GetMapping("/download/{pdfUniqueId}")
     public ResponseEntity<Void> downloadPdf(@PathVariable String pdfUniqueId) {

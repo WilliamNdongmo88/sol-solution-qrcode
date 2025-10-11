@@ -60,6 +60,17 @@ public class PdfService {
             throw new IllegalArgumentException("❌ Ce fichier existe déjà pour cet utilisateur.");
         }
 
+        // Création du répertoire de téléchargement s'il n'existe pas
+//        Path uploadPath = Paths.get(uploadDir);
+//        if (!Files.exists(uploadPath)) {
+//            Files.createDirectories(uploadPath);
+//        }
+//
+//        // Sauvegarde du fichier
+//        String filename = uniqueId + ".pdf";
+//        Path filePath = uploadPath.resolve(filename);
+//        Files.copy(file.getInputStream(), filePath);
+
         // Générer un ID unique
         String uniqueId = UUID.randomUUID().toString();
 
@@ -90,6 +101,20 @@ public class PdfService {
 
     public Optional<PdfMetadata> getPdfMetadata(String uniqueId) {
         return pdfMetadataRepository.findByUniqueId(uniqueId);
+    }
+
+    public File getPdfFile(String uniqueId) throws IOException {
+        Optional<PdfMetadata> pdfMetadata = getPdfMetadata(uniqueId);
+        if (pdfMetadata.isEmpty()) {
+            throw new IllegalArgumentException("PDF non trouvé avec l'ID: " + uniqueId);
+        }
+
+        File file = new File(pdfMetadata.get().getFilePath());
+        if (!file.exists()) {
+            throw new IOException("Le fichier PDF n'existe pas sur le disque");
+        }
+
+        return file;
     }
 
     public String extractTextFromPdf(String uniqueId) throws IOException {
