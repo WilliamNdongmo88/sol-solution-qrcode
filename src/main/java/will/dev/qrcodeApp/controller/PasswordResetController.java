@@ -2,7 +2,11 @@ package will.dev.qrcodeApp.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import will.dev.qrcodeApp.dto.PasswordResetRequest;
+import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.service.PasswordResetService;
 
 import java.util.Map;
@@ -46,6 +50,20 @@ public class PasswordResetController {
             }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/reset-password")
+    @PreAuthorize("hasAnyAuthority('USER','MANAGER','ADMIN')")
+    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        try {
+            passwordResetService.changePassword(user, request);
+            return ResponseEntity.ok(Map.of("message", "✅ Mot de passe modifié avec succès."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Erreur serveur: " + e.getMessage()));
         }
     }
 }

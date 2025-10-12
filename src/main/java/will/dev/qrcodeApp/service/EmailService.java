@@ -30,6 +30,9 @@ public class EmailService {
     @Value("${app.name:SSAC QR Code App}")
     private String appName;
 
+    @Value("${app.env.apiUrl}")
+    private String apiUrl;
+
     /**
      * Envoyer un email de bienvenue avec les informations de connexion
      */
@@ -185,7 +188,7 @@ public class EmailService {
             context.setVariable("userName", userName);
             context.setVariable("resetToken", resetToken);
             context.setVariable("appName", appName);
-            context.setVariable("resetUrl", "http://localhost:4200/reset-password/" + resetToken); // URL du frontend
+            context.setVariable("resetUrl", apiUrl+"/reset-password?token=" + resetToken);
 
             // Générer le contenu HTML
             String htmlContent = templateEngine.process("password-reset-email", context);

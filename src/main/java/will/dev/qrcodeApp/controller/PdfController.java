@@ -38,7 +38,7 @@ public class PdfController {
     private final PdfMetadataMapper pdfMetadataMapper;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
     public ResponseEntity<?> uploadPdf(@AuthenticationPrincipal User user,
                                        @RequestParam("file") MultipartFile file) {
         try {
