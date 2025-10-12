@@ -1,8 +1,13 @@
 package will.dev.qrcodeApp.controller;
 
 import com.google.zxing.WriterException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.client.RestTemplate;
 import will.dev.qrcodeApp.dto.QrCodeGenerationResponse;
 import will.dev.qrcodeApp.entity.QrCodeMetadata;
+import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.service.QrCodeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,10 +32,10 @@ import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/qrcode")
+@RequiredArgsConstructor
 public class QrCodeController {
 
-    @Autowired
-    private QrCodeService qrCodeService;
+    private final QrCodeService qrCodeService;
 
     @Value("${BASE_URL}")
     private String baseUrl;
@@ -88,45 +94,43 @@ public class QrCodeController {
 
 
     @GetMapping("/download/{qrCodeId}")
-    public ResponseEntity<Resource> downloadQrCode(@PathVariable String qrCodeId) {
-        try {
-            File qrCodeFile = qrCodeService.getQrCodeFile(qrCodeId);
-            Optional<QrCodeMetadata> qrCodeMetadata = qrCodeService.getQrCodeMetadata(qrCodeId);
-            
-            if (qrCodeMetadata.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            Resource resource = new FileSystemResource(qrCodeFile);
-            
-            return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_PNG)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, 
-                            "attachment; filename=\"qrcode_" + qrCodeId + ".png\"")
-                    .body(resource);
-        } catch (IllegalArgumentException e) {
+    public ResponseEntity<byte[]> downloadQrCode(@PathVariable String qrCodeId) {
+        Optional<QrCodeMetadata> qrCodeMetadata = qrCodeService.getQrCodeMetadata(qrCodeId);
+
+        if (qrCodeMetadata.isEmpty()) {
             return ResponseEntity.notFound().build();
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+
+        String fileUrl = qrCodeMetadata.get().getFilePath();
+
+        // Télécharge le fichier depuis Firebase Storage
+        RestTemplate restTemplate = new RestTemplate();
+        byte[] fileBytes = restTemplate.getForObject(fileUrl, byte[].class);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_PNG);
+        headers.setContentDispositionFormData("attachment", "qrcode.png");
+
+        return new ResponseEntity<>(fileBytes, headers, HttpStatus.OK);
     }
 
-    @GetMapping("/view/{qrCodeId}")
-    public ResponseEntity<Resource> viewQrCode(@PathVariable String qrCodeId) {
-        try {
-            File qrCodeFile = qrCodeService.getQrCodeFile(qrCodeId);
-            
-            Resource resource = new FileSystemResource(qrCodeFile);
-            
-            return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_PNG)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
-                    .body(resource);
-        } catch (IllegalArgumentException e) {
+
+    @GetMapping("/view/{qrCodeId}" )
+    public ResponseEntity<Void> viewQrCode(@PathVariable String qrCodeId) {
+        // 1. Récupérer les métadonnées du QR code depuis la base de données
+        Optional<QrCodeMetadata> qrCodeMetadataOpt = qrCodeService.getQrCodeMetadata(qrCodeId);
+
+        if (qrCodeMetadataOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+
+        // 2. Obtenir l'URL publique Firebase stockée dans le champ filePath
+        String firebaseQrCodeUrl = qrCodeMetadataOpt.get().getFilePath();
+
+        // 3. Rediriger le navigateur de l'utilisateur vers cette URL
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(firebaseQrCodeUrl))
+                .build();
     }
 
     @GetMapping("/info/{qrCodeId}")
@@ -138,17 +142,6 @@ public class QrCodeController {
         }
         
         return ResponseEntity.ok(qrCodeMetadata.get());
-    }
-
-    @DeleteMapping("/{qrCodeId}")
-    public ResponseEntity<?> deleteQrCode(@PathVariable String qrCodeId) {
-        try {
-            qrCodeService.deleteQrCode(qrCodeId);
-            return ResponseEntity.ok().body("QR Code supprimé avec succès");
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur lors de la suppression: " + e.getMessage());
-        }
     }
 }
 

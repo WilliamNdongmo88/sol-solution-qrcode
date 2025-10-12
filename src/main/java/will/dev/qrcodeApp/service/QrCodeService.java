@@ -20,6 +20,7 @@ import will.dev.qrcodeApp.repository.QrCodeMetadataRepository;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,7 +41,7 @@ public class QrCodeService {
     private final PdfMetadataRepository pdfMetadataRepository;
     private final UserActionService userActionService;
     private final EmailService emailService;
-
+    private final FirebaseStorageService firebaseStorageService;
     @Value("${app.qrcode.dir:uploads/qrcodes}")
     private String qrCodeDir;
 
@@ -60,29 +61,23 @@ public class QrCodeService {
             return existingQrCode.get();
         }
 
-        // Génération d'un ID unique pour le QR code
+        // 1. Génération de l'ID unique et du contenu du QR code
         String qrCodeUniqueId = UUID.randomUUID().toString();
-
-        // URL qui sera encodée dans le QR code (pointe vers l'endpoint de visualisation du PDF)
         String qrContent = baseUrl + "/api/pdf/view/" + pdfUniqueId;
 
-        // Création du répertoire de QR codes s'il n'existe pas
-        Path qrCodePath = Paths.get(qrCodeDir);
-        if (!Files.exists(qrCodePath)) {
-            Files.createDirectories(qrCodePath);
-        }
+        // 2. Génération de l'image QR code EN MÉMOIRE
+        byte[] qrCodeBytes = generateQrCodeImageBytes(qrContent, 300, 300, logoPath);
 
-        // Génération de l'image QR code
-        String filename = qrCodeUniqueId + ".png";
-        Path filePath = qrCodePath.resolve(filename);
-        generateQrCodeImage(qrContent, filePath.toString(), 300, 300, logoPath);
+        // 3. Upload de l'image sur Firebase Storage
+        String qrCodeFirebaseUrl = firebaseStorageService.uploadImage(qrCodeBytes, qrCodeUniqueId);
+        System.out.println("✅ QR Code uploadé sur Firebase. URL : " + qrCodeFirebaseUrl);
 
         // Création des métadonnées
         List<QrCodeMetadata> existingQrCodeList = qrCodeMetadataRepository.findAll();
         QrCodeMetadata qrCodeMetadata = new QrCodeMetadata();
         qrCodeMetadata.setUniqueId(qrCodeUniqueId);
         qrCodeMetadata.setQrName("QR00"+(existingQrCodeList.size()+1));
-        qrCodeMetadata.setFilePath(filePath.toString());
+        qrCodeMetadata.setFilePath(qrCodeFirebaseUrl);
         qrCodeMetadata.setPdfId(pdfUniqueId);
         qrCodeMetadata.setQrContent(qrContent);
         qrCodeMetadata.setGenerationDate(LocalDateTime.now());
@@ -97,12 +92,12 @@ public class QrCodeService {
         userActionService.logAction(pdfMetadata.getUser(), UserAction.TypeAction.GENERATION_QR, "QR Code généré pour le PDF " + savedQrCode.getPdfMetadata().getOriginalFilename());
 
         // Envoyer le QR code par email
-        emailService.sendQrCodeEmail(pdfMetadata.getUser(), filePath.toString(), qrContent);
+        emailService.sendQrCodeEmail(pdfMetadata.getUser(), qrCodeFirebaseUrl, qrContent);
 
         return savedQrCode;
     }
 
-    private void generateQrCodeImage(String text, String filePath, int width, int height, String logoPath) throws WriterException, IOException {
+    private byte[] generateQrCodeImageBytes(String text, int width, int height, String logoPath) throws WriterException, IOException {
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
 
         Map<EncodeHintType, Object> hints = new HashMap<>();
@@ -142,25 +137,17 @@ public class QrCodeService {
             }
         }
 
-        ImageIO.write(image, "PNG", new File(filePath));
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            // Écrit l'image finale au format PNG dans le flux en mémoire
+            ImageIO.write(image, "PNG", baos);
+
+            // Retourne le contenu du flux sous forme de tableau d'octets
+            return baos.toByteArray();
+        }
     }
 
     public Optional<QrCodeMetadata> getQrCodeMetadata(String uniqueId) {
         return qrCodeMetadataRepository.findByUniqueId(uniqueId);
-    }
-
-    public File getQrCodeFile(String uniqueId) throws IOException {
-        Optional<QrCodeMetadata> qrCodeMetadata = getQrCodeMetadata(uniqueId);
-        if (qrCodeMetadata.isEmpty()) {
-            throw new IllegalArgumentException("QR Code non trouvé avec l'ID: " + uniqueId);
-        }
-
-        File file = new File(qrCodeMetadata.get().getFilePath());
-        if (!file.exists()) {
-            throw new IOException("Le fichier QR Code n'existe pas sur le disque");
-        }
-
-        return file;
     }
 
     public boolean qrCodeExists(String uniqueId) {
@@ -168,32 +155,30 @@ public class QrCodeService {
     }
 
     @Transactional
-    public void deleteQrCode(String uniqueId) throws IOException {
-        Optional<QrCodeMetadata> qrCodeMetadataOpt = qrCodeMetadataRepository.findByUniqueId(uniqueId);
-        if (qrCodeMetadataOpt.isPresent()) {
-            QrCodeMetadata qrCodeMetadata = qrCodeMetadataOpt.get();
+    public void deleteQrCode(User user, Long qrCodeId) {
+        // 1. Récupérer les métadonnées pour obtenir l'URL du fichier
+        QrCodeMetadata qrCode = qrCodeMetadataRepository.findById(qrCodeId)
+                .orElseThrow(() -> new IllegalArgumentException("QR Code non trouvé avec l'ID: " + qrCodeId));
 
-            // Vérifier si l'utilisateur a le droit de supprimer ce QR code (admin/manager ou propriétaire)
-            if (qrCodeMetadata.getUser().getRole() == User.Role.USER && !qrCodeMetadata.getUser().getId().equals(qrCodeMetadata.getUser().getId())) {
-                throw new SecurityException("Vous n'êtes pas autorisé à supprimer ce QR code.");
-            }
+        // 2. Tenter de supprimer le fichier sur Firebase Storage
+        boolean deletedFromFirebase = firebaseStorageService.deleteFileFromUrl(qrCode.getFilePath());
 
-            // Suppression du fichier physique
-            File file = new File(qrCodeMetadata.getFilePath());
-            if (file.exists()) {
-                Files.delete(file.toPath());
-            }
-
-            // Suppression des métadonnées
-            qrCodeMetadataRepository.delete(qrCodeMetadata);
-
-            // Enregistrer l'action de suppression
-            userActionService.logAction(qrCodeMetadata.getUser(), UserAction.TypeAction.SUPPRESSION_QR,
-                    "QR Code " + uniqueId + " supprimé par " + qrCodeMetadata.getUser().getEmail());
-        } else {
-            throw new IllegalArgumentException("QR Code non trouvé avec l'ID: " + uniqueId);
+        if (!deletedFromFirebase) {
+            throw new RuntimeException("Impossible de supprimer le fichier Firebase : " + qrCode.getFilePath());
         }
+
+        // 3. Si la suppression sur Firebase a réussi, supprimer l'entrée de la base de données
+        qrCodeMetadataRepository.delete(qrCode);
+
+        userActionService.logAction(
+                user,
+                UserAction.TypeAction.SUPPRESSION_QR,
+                "Suppression du QR Code : " + qrCode.getQrName()
+        );
+
+        System.out.println("QR Code " + qrCodeId + " et fichier associé supprimés avec succès.");
     }
+
 }
 
 
