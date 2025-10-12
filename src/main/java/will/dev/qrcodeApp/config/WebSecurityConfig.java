@@ -46,7 +46,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/admin/**").permitAll()
                         .requestMatchers("/api/pdf/**").permitAll()
                         .requestMatchers("/api/qrcode/**").permitAll()
-                        .requestMatchers("/api/**", "api/health").permitAll()
+                        .requestMatchers("/api/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
                         .anyRequest().authenticated()
                 )
