@@ -57,42 +57,21 @@ public class WebSecurityConfig {
         return http.build();
     }
 
-//    @Bean
-//    public CorsConfigurationSource corsConfigurationSource() {
-//        CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.setAllowedOrigins(List.of(
-//                lienDuSite,
-//                baseUrl
-////                "https://sol-solution-qrcode.vercel.app",
-////                "http://localhost:4200"
-//        ));
-//        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-//        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-//        configuration.setAllowCredentials(true);
-//
-//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-//        source.registerCorsConfiguration("/**", configuration);
-//
-//        return source;
-//    }
     @Bean
-    CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource() {
+        System.out.println("[CorsConfigurationSource] lienDuSite :: "+ lienDuSite);
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // La liste des origines autorisées
-        configuration.setAllowedOrigins(List.of("https://sol-solution-qrcode.vercel.app" ));
-
-        // Les méthodes HTTP autorisées
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // Les en-têtes autorisés
-        configuration.setAllowedHeaders(List.of("*"));
-
-        // Autoriser les credentials
+        configuration.setAllowedOrigins(List.of(
+                lienDuSite,
+                baseUrl,
+                "https://sol-solution-qrcode.vercel.app"
+//                "http://localhost:4200"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Appliquer cette configuration à toutes les routes
         source.registerCorsConfiguration("/**", configuration);
 
         return source;
