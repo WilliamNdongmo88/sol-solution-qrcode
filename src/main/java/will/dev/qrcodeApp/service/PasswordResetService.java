@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import will.dev.qrcodeApp.dto.PasswordResetRequest;
 import will.dev.qrcodeApp.entity.PasswordResetToken;
 import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.repository.PasswordResetTokenRepository;
@@ -82,6 +83,27 @@ public class PasswordResetService {
     @Transactional
     public void cleanupExpiredTokens() {
         passwordResetTokenRepository.deleteExpiredTokens(LocalDateTime.now());
+    }
+
+    public void changePassword(User user, PasswordResetRequest request) {
+        // Vérification du mot de passe actuel
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Mot de passe actuel incorrect.");
+        }
+
+        // Vérification de la confirmation
+        if (!request.getNewPassword().equals(request.getNewPasswordConfirm())) {
+            throw new IllegalArgumentException("Les nouveaux mots de passe ne correspondent pas.");
+        }
+
+        // Vérification de la complexité (exemple)
+//        if (request.getNewPassword().length() < 8) {
+//            throw new IllegalArgumentException("⚠️ Le nouveau mot de passe doit contenir au moins 8 caractères.");
+//        }
+
+        // Mise à jour du mot de passe
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }
 

@@ -35,4 +35,4 @@ build/
 # Fichiers sensibles
 src/main/resources/.env
 src/main/resources/application-dev.properties
-src/main/resources/firebase/serviceAccountKey.json
+src/main/resources/solsolution-firebase-service-key.json
