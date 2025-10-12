@@ -38,6 +38,7 @@ public class QrCodeService {
     private final PdfMetadataRepository pdfMetadataRepository;
     private final UserActionService userActionService;
     private final EmailService emailService;
+    private final BrevoService brevoService;
     private final FirebaseStorageService firebaseStorageService;
     @Value("${app.qrcode.dir:uploads/qrcodes}")
     private String qrCodeDir;
@@ -89,7 +90,7 @@ public class QrCodeService {
         userActionService.logAction(pdfMetadata.getUser(), UserAction.TypeAction.GENERATION_QR, "QR Code généré pour le PDF " + savedQrCode.getPdfMetadata().getOriginalFilename());
 
         // Envoyer le QR code par email
-        emailService.sendQrCodeEmail(pdfMetadata.getUser(), qrCodeFirebaseUrl, qrContent);
+        brevoService.sendQrCodeEmail(pdfMetadata.getUser(), qrCodeFirebaseUrl, qrContent);
 
         return savedQrCode;
     }
