@@ -14,6 +14,7 @@ import org.thymeleaf.context.Context;
 import will.dev.qrcodeApp.entity.User;
 
 import java.io.File;
+import java.util.Collections;
 
 @Service
 public class EmailService {
