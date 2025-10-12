@@ -1,8 +1,10 @@
 package will.dev.qrcodeApp.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import will.dev.qrcodeApp.dto.CreateUserRequest;
 import will.dev.qrcodeApp.dto.QrCodeMetadataDto;
@@ -16,9 +18,12 @@ import will.dev.qrcodeApp.mapper.QrCodeMetadataMapper;
 import will.dev.qrcodeApp.mapper.UserActionMapper;
 import will.dev.qrcodeApp.mapper.UserMapper;
 import will.dev.qrcodeApp.repository.QrCodeMetadataRepository;
+import will.dev.qrcodeApp.service.QrCodeService;
 import will.dev.qrcodeApp.service.UserActionService;
 import will.dev.qrcodeApp.service.UserService;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,11 +38,12 @@ public class AdminController {
     private final UserActionService userActionService;
     private final QrCodeMetadataRepository qrCodeMetadataRepository;
     private final UserMapper userMapper;
+    private final QrCodeService qrCodeService;
     private final UserActionMapper userActionMapper;
     private final QrCodeMetadataMapper qrCodeMetadataMapper;
 
     @GetMapping("/users")
-    @PreAuthorize("hasAnyAuthority(\'ADMIN\', \'MANAGER\')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
     public ResponseEntity<List<UserDto>> getAllUsers() {
         try{
             List<User> users = userService.getAllUsers();
@@ -48,7 +54,7 @@ public class AdminController {
     }
 
     @PostMapping("/users")
-    @PreAuthorize("hasAuthority(\'ADMIN\')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<UserDto> createUser(@RequestBody CreateUserRequest request) {
         try {
             User newUser = userService.createUser(request.getNom(), request.getEmail(),
@@ -83,28 +89,31 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/status")
-    @PreAuthorize("hasAuthority(\'ADMIN\')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<UserDto> toggleUserStatus(@PathVariable Long id) {
         User updatedUser = userService.toggleUserStatus(id);
         return ResponseEntity.ok(userMapper.userToUserDto(updatedUser));
     }
 
     @GetMapping("/actions")
-    @PreAuthorize("hasAnyAuthority(\'ADMIN\', \'MANAGER\')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
     public ResponseEntity<List<UserActionDto>> getAllActions() {
         List<UserAction> actions = userActionService.getAllActions();
         return ResponseEntity.ok(actions.stream().map(userActionMapper::userActionToUserActionDto).collect(Collectors.toList()));
     }
 
-    @DeleteMapping("/qrcodes/{uniqueId}")
-    @PreAuthorize("hasAnyAuthority(\'ADMIN\', \'MANAGER\')")
-    public ResponseEntity<Map<String, String>> deleteQrCode(@PathVariable String uniqueId) {
-        qrCodeMetadataRepository.deleteByUniqueId(uniqueId);
-        return ResponseEntity.ok(Map.of("message","QR code supprimé avec succès"));
+    @DeleteMapping("/qrcodes/{qrCodeId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    public ResponseEntity<?> deleteQrCode(@PathVariable Long qrCodeId) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        qrCodeService.deleteQrCode(user, qrCodeId);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "QR Code supprimé avec succès");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/qrcodes")
-    @PreAuthorize("hasAnyAuthority(\'ADMIN\', \'MANAGER\')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
     public ResponseEntity<List<QrCodeMetadataDto>> getAllQrCodes() {
         List<QrCodeMetadata> qrCodes = qrCodeMetadataRepository.findAll();
         return ResponseEntity.ok(qrCodes.stream().map(qrCodeMetadataMapper::qrCodeMetadataToQrCodeMetadataDto).collect(Collectors.toList()));
