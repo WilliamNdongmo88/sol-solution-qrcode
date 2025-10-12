@@ -16,7 +16,10 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import will.dev.qrcodeApp.filter.JwtAuthenticationFilter;
 
+import java.util.Arrays;
 import java.util.List;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -38,6 +41,7 @@ public class WebSecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 //.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(withDefaults( ))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/admin/**").permitAll()
@@ -72,6 +76,28 @@ public class WebSecurityConfig {
 //
 //        return source;
 //    }
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // La liste des origines autorisées
+        configuration.setAllowedOrigins(List.of("https://sol-solution-qrcode.vercel.app" ));
+
+        // Les méthodes HTTP autorisées
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // Les en-têtes autorisés
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // Autoriser les credentials
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Appliquer cette configuration à toutes les routes
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
 }
 
 
