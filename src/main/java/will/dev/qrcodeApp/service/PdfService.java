@@ -69,7 +69,7 @@ public class PdfService {
         userActionService.logAction(
                 user,
                 UserAction.TypeAction.UPLOAD_PDF,
-                "Upload du pdf : " + pdfMetadata.getOriginalFilename()
+                "Upload du pdf :: " + pdfMetadata.getOriginalFilename()
         );
 
         // Sauvegarder en BD
