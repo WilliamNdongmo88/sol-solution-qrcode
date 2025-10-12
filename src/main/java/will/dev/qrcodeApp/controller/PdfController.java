@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import will.dev.qrcodeApp.dto.PdfMetadataDto;
@@ -37,7 +38,7 @@ public class PdfController {
     private final PdfMetadataMapper pdfMetadataMapper;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<?> uploadPdf(@AuthenticationPrincipal User user,
                                        @RequestParam("file") MultipartFile file) {
         try {
@@ -50,43 +51,22 @@ public class PdfController {
         }
     }
 
-//    @GetMapping("/view/{pdfUniqueId}")
-//    public ResponseEntity<Void> viewPdf(@PathVariable String pdfUniqueId) {
-//        Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
-//
-//        if (pdfMetadata.isEmpty()) {
-//            return ResponseEntity.notFound().build();
-//        }
-//
-//        // Soit tu rediriges vers l’URL Cloudinary
-//        return ResponseEntity.status(HttpStatus.FOUND)
-//                .location(URI.create(pdfMetadata.get().getFilePath()))
-//                .build();
-//    }
-@GetMapping("/view/{pdfUniqueId}")
-public ResponseEntity<Resource> viewPdf(@PathVariable String pdfUniqueId) {
-    try {
-        File pdfFile = pdfService.getPdfFile(pdfUniqueId);
-        Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
+    @GetMapping("/view/{pdfUniqueId}")
+    public ResponseEntity<Void> viewPdf(@PathVariable String pdfUniqueId) {
+        Optional<PdfMetadata> pdfMetadataOpt = pdfService.getPdfMetadata(pdfUniqueId);
 
-        if (pdfMetadata.isEmpty()) {
+        if (pdfMetadataOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        Resource resource = new FileSystemResource(pdfFile);
+        // Récupérer l'URL Firebase depuis la BDD
+        String viewUrl = pdfMetadataOpt.get().getFilePath();
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"" + pdfMetadata.get().getOriginalFilename() + "\"")
-                .body(resource);
-    } catch (IllegalArgumentException e) {
-        return ResponseEntity.notFound().build();
-    } catch (IOException e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        // Rediriger le navigateur vers l'URL Firebase
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(viewUrl))
+                .build();
     }
-}
-
 
     @GetMapping("/download/{pdfUniqueId}")
     public ResponseEntity<Void> downloadPdf(@PathVariable String pdfUniqueId) {
@@ -96,7 +76,6 @@ public ResponseEntity<Resource> viewPdf(@PathVariable String pdfUniqueId) {
             return ResponseEntity.notFound().build();
         }
 
-        // Ajout du paramètre download=true pour forcer Cloudinary à déclencher un téléchargement
         String downloadUrl = pdfMetadata.get().getFilePath() + "?download=true";
 
         return ResponseEntity.status(HttpStatus.FOUND)
@@ -105,7 +84,7 @@ public ResponseEntity<Resource> viewPdf(@PathVariable String pdfUniqueId) {
     }
 
     @GetMapping("/info/{pdfUniqueId}")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<PdfMetadataDto> getPdfInfo(@PathVariable String pdfUniqueId) {
         Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
 
@@ -133,8 +112,9 @@ public ResponseEntity<Resource> viewPdf(@PathVariable String pdfUniqueId) {
     }
 
     @DeleteMapping("/{pdfUniqueId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER') or (hasAuthority('USER') and @pdfService.getPdfMetadata(#pdfUniqueId).get().getUser().getId() == authentication.principal.id)")
-    public ResponseEntity<String> deletePdf(@AuthenticationPrincipal User user, @PathVariable String pdfUniqueId) {
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    public ResponseEntity<String> deletePdf(@PathVariable Long pdfUniqueId) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         try {
             pdfService.deletePdf(user, pdfUniqueId);
             return ResponseEntity.ok().body("PDF supprimé avec succès");
@@ -152,7 +132,7 @@ public ResponseEntity<Resource> viewPdf(@PathVariable String pdfUniqueId) {
     }
 
     @GetMapping("/user-pdfs")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<List<PdfMetadataDto>> getUserPdfs(@AuthenticationPrincipal User user) {
         List<PdfMetadata> pdfs = pdfService.getUserPdfs(user);
         return ResponseEntity.ok(pdfs.stream()

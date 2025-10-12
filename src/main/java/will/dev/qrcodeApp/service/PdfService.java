@@ -1,7 +1,7 @@
 package will.dev.qrcodeApp.service;
 
-import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -18,33 +18,20 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class PdfService {
-    @Value("${app.upload.dir:uploads/pdfs}")
-    private String uploadDir;
-
-    @Value("${cloudinary.cloud-name}")
-    private String cloud_name;
-
-    @Value("${cloudinary.api-key}")
-    private String api_key;
-
-    @Value("${cloudinary.api-secret}")
-    private String api_secret;
 
     private final PdfMetadataRepository pdfMetadataRepository;
     private final UserActionService userActionService;
-    private final Cloudinary cloudinary;
+    private final FirebaseStorageService firebaseStorageService;
+    private final Storage storage;
 
     @Transactional
     public PdfMetadata uploadPdf(User user, MultipartFile file) throws IOException {
@@ -65,37 +52,25 @@ public class PdfService {
         // Générer un ID unique
         String uniqueId = UUID.randomUUID().toString();
 
-        // Création du répertoire de téléchargement s'il n'existe pas
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
-
-        // Sauvegarde du fichier
-        String filename = uniqueId + ".pdf";
-        Path filePath = uploadPath.resolve(filename);
-        Files.copy(file.getInputStream(), filePath);
-
-        // Upload sur Cloudinary
-        Map uploadResult = cloudinary.uploader().upload(
-                file.getBytes(),
-                ObjectUtils.asMap(
-                        "public_id", "pdfs/" + uniqueId,
-                        "resource_type", "image" // raw Obligatoire pour les PDF : auto ou (image, video, raw)
-                )
-        );
-        String cloudinaryUrl = (String) uploadResult.get("secure_url");
-        System.out.println("✅ Fichier uploadé sur Cloudinary : " + cloudinaryUrl);
+        // Appeler le service Firebase pour uploader et obtenir l'URL
+        String fileUrl = firebaseStorageService.uploadFile(file, uniqueId);
+        System.out.println("✅ Fichier uploadé sur Firebase. URL : " + fileUrl);
 
         // Créer les métadonnées
         PdfMetadata pdfMetadata = new PdfMetadata();
         pdfMetadata.setUniqueId(uniqueId);
         pdfMetadata.setOriginalFilename(file.getOriginalFilename());
-        pdfMetadata.setFilePath(cloudinaryUrl);
+        pdfMetadata.setFilePath(fileUrl);
         pdfMetadata.setFileSize(file.getSize());
         pdfMetadata.setUploadDate(LocalDateTime.now());
         pdfMetadata.setContentType(file.getContentType());
         pdfMetadata.setUser(user);
+
+        userActionService.logAction(
+                user,
+                UserAction.TypeAction.UPLOAD_PDF,
+                "Upload du pdf : " + pdfMetadata.getOriginalFilename()
+        );
 
         // Sauvegarder en BD
         return pdfMetadataRepository.save(pdfMetadata);
@@ -103,20 +78,6 @@ public class PdfService {
 
     public Optional<PdfMetadata> getPdfMetadata(String uniqueId) {
         return pdfMetadataRepository.findByUniqueId(uniqueId);
-    }
-
-    public File getPdfFile(String uniqueId) throws IOException {
-        Optional<PdfMetadata> pdfMetadata = getPdfMetadata(uniqueId);
-        if (pdfMetadata.isEmpty()) {
-            throw new IllegalArgumentException("PDF non trouvé avec l'ID: " + uniqueId);
-        }
-
-        File file = new File(pdfMetadata.get().getFilePath());
-        if (!file.exists()) {
-            throw new IOException("Le fichier PDF n'existe pas sur le disque");
-        }
-
-        return file;
     }
 
     public String extractTextFromPdf(String uniqueId) throws IOException {
@@ -144,41 +105,28 @@ public class PdfService {
         return pdfMetadataRepository.existsByUniqueId(uniqueId);
     }
 
+    /**
+     * Supprime un PDF du stockage Firebase et de la base de données.
+     */
     @Transactional
-    public void deletePdf(User user, String uniqueId) throws IOException {
-        Optional<PdfMetadata> pdfMetadataOpt = pdfMetadataRepository.findByUniqueId(uniqueId);
-        if (pdfMetadataOpt.isEmpty()) {
-            throw new IllegalArgumentException("PDF non trouvé avec l'ID: " + uniqueId);
-        }
+    public void deletePdf(User user, Long pdfUniqueId) throws IOException {
+        // 1️⃣ Récupérer le PDF depuis la base de données
+        PdfMetadata pdfMetadata = pdfMetadataRepository.findById(pdfUniqueId)
+                .orElseThrow(() -> new IllegalArgumentException("PDF introuvable avec l'ID : " + pdfUniqueId));
 
-        PdfMetadata pdfMetadata = pdfMetadataOpt.get();
+        // 3️⃣ Supprimer le fichier du stockage Firebase
+        String filePath = pdfMetadata.getFilePath(); // ex: "pdfs/monfichier.pdf"
+        firebaseStorageService.deleteFileFromUrl(filePath);
 
-        // Vérifier les droits
-        if (user.getRole() == User.Role.USER && !pdfMetadata.getUser().getId().equals(user.getId())) {
-            throw new SecurityException("Vous n'êtes pas autorisé à supprimer ce PDF.");
-        }
-
-        // Suppression via Cloudinary
-        Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
-                "cloud_name", cloud_name,
-                "api_key", api_key,
-                "api_secret", api_secret
-        ));
-
-        // Le public_id est celui qu'on avait utilisé à l'upload : "pdfs/" + uniqueId
-        String publicId = "pdfs/" + uniqueId;
-        try {
-            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "raw"));
-        } catch (Exception e) {
-            throw new IOException("Erreur lors de la suppression sur Cloudinary : " + e.getMessage());
-        }
-
-        // Suppression des métadonnées
+        // 4️⃣ Supprimer les métadonnées en base
         pdfMetadataRepository.delete(pdfMetadata);
 
-        // Log action
-        userActionService.logAction(user, UserAction.TypeAction.SUPPRESSION_PDF,
-                "PDF " + uniqueId + " supprimé par " + user.getEmail());
+        // 5️⃣ Loguer l’action utilisateur
+        userActionService.logAction(
+                user,
+                UserAction.TypeAction.SUPPRESSION_PDF,
+                "Suppression du PDF : " + pdfMetadata.getOriginalFilename()
+        );
     }
 
 
