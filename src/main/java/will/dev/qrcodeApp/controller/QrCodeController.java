@@ -136,11 +136,11 @@ public class QrCodeController {
     @GetMapping("/info/{qrCodeId}")
     public ResponseEntity<?> getQrCodeInfo(@PathVariable String qrCodeId) {
         Optional<QrCodeMetadata> qrCodeMetadata = qrCodeService.getQrCodeMetadata(qrCodeId);
-        
+
         if (qrCodeMetadata.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         return ResponseEntity.ok(qrCodeMetadata.get());
     }
 }
