@@ -13,6 +13,8 @@ import java.util.Optional;
 
 @Repository
 public interface QrCodeMetadataRepository extends JpaRepository<QrCodeMetadata, Long> {
+
+    Optional<QrCodeMetadata> findById(Long id);
     
     Optional<QrCodeMetadata> findByUniqueId(String uniqueId);
     
