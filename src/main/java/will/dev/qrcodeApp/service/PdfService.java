@@ -1,7 +1,5 @@
 package will.dev.qrcodeApp.service;
 
-import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.Storage;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -16,13 +14,13 @@ import will.dev.qrcodeApp.repository.PdfMetadataRepository;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -30,105 +28,112 @@ public class PdfService {
 
     private final PdfMetadataRepository pdfMetadataRepository;
     private final UserActionService userActionService;
-    private final FirebaseStorageService firebaseStorageService;
-    private final Storage storage;
+
+    @Value("${app.upload.dir:uploads/pdfs}")
+    private String uploadDir;
 
     @Transactional
     public PdfMetadata uploadPdf(User user, MultipartFile file) throws IOException {
-        // Vérification du fichier
+        // Validation du fichier
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("❌ Le fichier est vide.");
+            throw new IllegalArgumentException("Le fichier est vide");
         }
 
         if (!"application/pdf".equals(file.getContentType())) {
-            throw new IllegalArgumentException("❌ Seuls les fichiers PDF sont autorisés.");
+            throw new IllegalArgumentException("Le fichier doit être un PDF");
         }
 
-        // Vérifier si le fichier existe déjà pour cet utilisateur
-        if (pdfMetadataRepository.existsByOriginalFilenameAndUser(file.getOriginalFilename(), user)) {
-            throw new IllegalArgumentException("❌ Ce fichier existe déjà pour cet utilisateur.");
-        }
-
-        // Générer un ID unique
+        // Génération d'un ID unique
         String uniqueId = UUID.randomUUID().toString();
 
-        // Appeler le service Firebase pour uploader et obtenir l'URL
-        String fileUrl = firebaseStorageService.uploadFile(file, uniqueId);
-        System.out.println("✅ Fichier uploadé sur Firebase. URL : " + fileUrl);
+        // Création du répertoire de téléchargement s'il n'existe pas
+        Path uploadPath = Paths.get(uploadDir);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
 
-        // Créer les métadonnées
+        // Sauvegarde du fichier
+        String filename = uniqueId + ".pdf";
+        Path filePath = uploadPath.resolve(filename);
+        Files.copy(file.getInputStream(), filePath);
+
+        // Création des métadonnées
         PdfMetadata pdfMetadata = new PdfMetadata();
         pdfMetadata.setUniqueId(uniqueId);
         pdfMetadata.setOriginalFilename(file.getOriginalFilename());
-        pdfMetadata.setFilePath(fileUrl);
+        pdfMetadata.setFilePath(filePath.toString());
         pdfMetadata.setFileSize(file.getSize());
         pdfMetadata.setUploadDate(LocalDateTime.now());
         pdfMetadata.setContentType(file.getContentType());
         pdfMetadata.setUser(user);
 
-        userActionService.logAction(
-                user,
-                UserAction.TypeAction.UPLOAD_PDF,
-                "Upload du pdf :: " + pdfMetadata.getOriginalFilename()
-        );
+        PdfMetadata savedPdf = pdfMetadataRepository.save(pdfMetadata);
 
-        // Sauvegarder en BD
-        return pdfMetadataRepository.save(pdfMetadata);
+        // Enregistrer l'action d'upload
+        userActionService.logAction(user, UserAction.TypeAction.UPLOAD_PDF,
+                "PDF " + file.getOriginalFilename() + " uploadé par " + user.getEmail());
+
+        return savedPdf;
     }
 
     public Optional<PdfMetadata> getPdfMetadata(String uniqueId) {
         return pdfMetadataRepository.findByUniqueId(uniqueId);
     }
 
-    public String extractTextFromPdf(String uniqueId) throws IOException {
+    public File getPdfFile(String uniqueId) throws IOException {
         Optional<PdfMetadata> pdfMetadata = getPdfMetadata(uniqueId);
         if (pdfMetadata.isEmpty()) {
             throw new IllegalArgumentException("PDF non trouvé avec l'ID: " + uniqueId);
         }
 
-        String cloudinaryUrl = pdfMetadata.get().getFilePath();
-        if (cloudinaryUrl == null || cloudinaryUrl.isBlank()) {
-            throw new IOException("Le fichier PDF n'a pas d'URL Cloudinary");
+        File file = new File(pdfMetadata.get().getFilePath());
+        if (!file.exists()) {
+            throw new IOException("Le fichier PDF n'existe pas sur le disque");
         }
 
-        // On récupère le PDF depuis Cloudinary via InputStream
-        try (InputStream inputStream = new URL(cloudinaryUrl).openStream();
-             PDDocument document = PDDocument.load(inputStream)) {
+        return file;
+    }
 
+    public String extractTextFromPdf(String uniqueId) throws IOException {
+        File pdfFile = getPdfFile(uniqueId);
+
+        try (PDDocument document = PDDocument.load(pdfFile)) {
             PDFTextStripper pdfStripper = new PDFTextStripper();
             return pdfStripper.getText(document);
         }
     }
 
-
     public boolean pdfExists(String uniqueId) {
         return pdfMetadataRepository.existsByUniqueId(uniqueId);
     }
 
-    /**
-     * Supprime un PDF du stockage Firebase et de la base de données.
-     */
     @Transactional
-    public void deletePdf(User user, Long pdfUniqueId) throws IOException {
-        // 1️⃣ Récupérer le PDF depuis la base de données
-        PdfMetadata pdfMetadata = pdfMetadataRepository.findById(pdfUniqueId)
-                .orElseThrow(() -> new IllegalArgumentException("PDF introuvable avec l'ID : " + pdfUniqueId));
+    public void deletePdf(User user, String uniqueId) throws IOException {
+        Optional<PdfMetadata> pdfMetadataOpt = pdfMetadataRepository.findByUniqueId(uniqueId);
+        if (pdfMetadataOpt.isPresent()) {
+            PdfMetadata pdfMetadata = pdfMetadataOpt.get();
 
-        // 3️⃣ Supprimer le fichier du stockage Firebase
-        String filePath = pdfMetadata.getFilePath(); // ex: "pdfs/monfichier.pdf"
-        firebaseStorageService.deleteFileFromUrl(filePath);
+            // Vérifier si l'utilisateur a le droit de supprimer ce PDF (admin/manager ou propriétaire)
+            if (user.getRole() == User.Role.USER && !pdfMetadata.getUser().getId().equals(user.getId())) {
+                throw new SecurityException("Vous n'êtes pas autorisé à supprimer ce PDF.");
+            }
 
-        // 4️⃣ Supprimer les métadonnées en base
-        pdfMetadataRepository.delete(pdfMetadata);
+            // Suppression du fichier physique
+            File file = new File(pdfMetadata.getFilePath());
+            if (file.exists()) {
+                Files.delete(file.toPath());
+            }
 
-        // 5️⃣ Loguer l’action utilisateur
-        userActionService.logAction(
-                user,
-                UserAction.TypeAction.SUPPRESSION_PDF,
-                "Suppression du PDF : " + pdfMetadata.getOriginalFilename()
-        );
+            // Suppression des métadonnées
+            pdfMetadataRepository.delete(pdfMetadata);
+
+            // Enregistrer l'action de suppression
+            userActionService.logAction(user, UserAction.TypeAction.SUPPRESSION_PDF,
+                    "PDF " + uniqueId + " supprimé par " + user.getEmail());
+        } else {
+            throw new IllegalArgumentException("PDF non trouvé avec l'ID: " + uniqueId);
+        }
     }
-
 
     public List<PdfMetadata> getUserPdfs(User user) {
         return pdfMetadataRepository.findByUserOrderByUploadDateDesc(user);

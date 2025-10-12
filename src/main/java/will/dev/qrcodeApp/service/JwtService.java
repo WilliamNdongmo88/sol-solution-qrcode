@@ -34,19 +34,14 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-//    public String generateToken(Authentication authentication) {
-//        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
-//        return buildToken(userPrincipal, jwtExpiration);
-//    }
-
     public String generateToken(User user) {
-        return buildToken(user, jwtExpiration);//new HashMap<>(),
+        return buildToken(user, jwtExpiration);
     }
 
     private String buildToken(
             User user,
             long expiration
-    ) {//Map<String, Object> extraClaims,
+    ) {
         Map<String, Object> claims = Map.of(
                 "id", user.getId(),
                 "role", user.getAuthorities(),

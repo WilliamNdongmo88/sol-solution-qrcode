@@ -9,7 +9,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import will.dev.qrcodeApp.dto.PdfMetadataDto;
@@ -20,7 +19,6 @@ import will.dev.qrcodeApp.service.PdfService;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,53 +36,107 @@ public class PdfController {
     private final PdfMetadataMapper pdfMetadataMapper;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
     public ResponseEntity<?> uploadPdf(@AuthenticationPrincipal User user,
                                        @RequestParam("file") MultipartFile file) {
         try {
-            PdfMetadata pdf = pdfService.uploadPdf(user, file);
-            return ResponseEntity.ok(pdfMetadataMapper.pdfMetadataToPdfMetadataDto(pdf));
+            Path pdfDir = Paths.get("uploads/pdfs");
+            if (!Files.exists(pdfDir)) {
+                Files.createDirectories(pdfDir);
+            }
+
+            // Nom du fichier uploadé (ex: facture_2025.pdf)
+            String uploadedFileName = file.getOriginalFilename();
+            if (uploadedFileName == null || uploadedFileName.isBlank()) {
+                throw new IllegalArgumentException("❌ Nom de fichier invalide.");
+            }
+
+            // Nom sans extension (ex: facture_2025)
+            String uploadedNameWithoutExt = uploadedFileName.replaceFirst("[.][^.]+$", "");
+            System.out.println("📤 Nom du fichier uploadé (sans extension) : " + uploadedNameWithoutExt);
+
+            // Récupérer tous les fichiers existants dans le dossier
+            List<String> existingNamesWithoutExt = new ArrayList<>();
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(pdfDir, "*.pdf")) {
+                for (Path existingFile : stream) {
+                    String existingName = existingFile.getFileName().toString();
+                    String nameWithoutExt = existingName.replaceFirst("[.][^.]+$", "");
+                    existingNamesWithoutExt.add(nameWithoutExt);
+                    System.out.println("📂 Nom de fichier trouvé dans uploads/pdfs : " + nameWithoutExt);
+                }
+            }
+
+            // Vérification en BD : uploaded + tous ceux déjà présents dans uploads/pdfs
+            List<String> uniqueIdsToCheck = new ArrayList<>(existingNamesWithoutExt);
+
+            for (String unique_id : uniqueIdsToCheck) {
+                boolean existsInDb = pdfService.existsByUniqueIdAndUploadedFileName(unique_id, uploadedFileName);
+                if (existsInDb) {
+                    throw new IllegalArgumentException("❌ Le fichier '" + uploadedFileName + "' existe déjà en base de données.");
+                }
+            }
+
+            // --- Si tout est bon → upload ---
+            PdfMetadata pdfMetadata = pdfService.uploadPdf(user, file);
+            return ResponseEntity.ok(pdfMetadataMapper.pdfMetadataToPdfMetadataDto(pdfMetadata));
+
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("❌ Erreur serveur : " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur IO: " + e.getMessage()));
         }
     }
 
     @GetMapping("/view/{pdfUniqueId}")
-    public ResponseEntity<Void> viewPdf(@PathVariable String pdfUniqueId) {
-        Optional<PdfMetadata> pdfMetadataOpt = pdfService.getPdfMetadata(pdfUniqueId);
+    public ResponseEntity<Resource> viewPdf(@PathVariable String pdfUniqueId) {
+        try {
+            File pdfFile = pdfService.getPdfFile(pdfUniqueId);
+            Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
 
-        if (pdfMetadataOpt.isEmpty()) {
+            if (pdfMetadata.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource resource = new FileSystemResource(pdfFile);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "inline; filename=\"" + pdfMetadata.get().getOriginalFilename() + "\"")
+                    .body(resource);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        // Récupérer l'URL Firebase depuis la BDD
-        String viewUrl = pdfMetadataOpt.get().getFilePath();
-
-        // Rediriger le navigateur vers l'URL Firebase
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(viewUrl))
-                .build();
     }
 
     @GetMapping("/download/{pdfUniqueId}")
-    public ResponseEntity<Void> downloadPdf(@PathVariable String pdfUniqueId) {
-        Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
+    public ResponseEntity<Resource> downloadPdf(@PathVariable String pdfUniqueId) {
+        try {
+            File pdfFile = pdfService.getPdfFile(pdfUniqueId);
+            Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
 
-        if (pdfMetadata.isEmpty()) {
+            if (pdfMetadata.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource resource = new FileSystemResource(pdfFile);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + pdfMetadata.get().getOriginalFilename() + "\"")
+                    .body(resource);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        String downloadUrl = pdfMetadata.get().getFilePath() + "?download=true";
-
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(downloadUrl))
-                .build();
     }
 
     @GetMapping("/info/{pdfUniqueId}")
-    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
     public ResponseEntity<PdfMetadataDto> getPdfInfo(@PathVariable String pdfUniqueId) {
         Optional<PdfMetadata> pdfMetadata = pdfService.getPdfMetadata(pdfUniqueId);
 
@@ -96,15 +148,13 @@ public class PdfController {
     }
 
     @GetMapping("/text/{pdfUniqueId}")
-    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
     public ResponseEntity<String> extractTextFromPdf(@PathVariable String pdfUniqueId) {
         try {
             String text = pdfService.extractTextFromPdf(pdfUniqueId);
             return ResponseEntity.ok().body(text);
-
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
-
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur lors de l'extraction du texte: " + e.getMessage());
@@ -112,19 +162,15 @@ public class PdfController {
     }
 
     @DeleteMapping("/{pdfUniqueId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
-    public ResponseEntity<String> deletePdf(@PathVariable Long pdfUniqueId) {
-        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    @PreAuthorize("hasAnyAuthority(\'ADMIN\', \'MANAGER\') or (hasAuthority(\'USER\') and @pdfService.getPdfMetadata(#pdfUniqueId).get().getUser().getId() == authentication.principal.id)")
+    public ResponseEntity<String> deletePdf(@AuthenticationPrincipal User user, @PathVariable String pdfUniqueId) {
         try {
             pdfService.deletePdf(user, pdfUniqueId);
             return ResponseEntity.ok().body("PDF supprimé avec succès");
-
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
-
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur lors de la suppression: " + e.getMessage());
@@ -132,14 +178,11 @@ public class PdfController {
     }
 
     @GetMapping("/user-pdfs")
-    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
     public ResponseEntity<List<PdfMetadataDto>> getUserPdfs(@AuthenticationPrincipal User user) {
         List<PdfMetadata> pdfs = pdfService.getUserPdfs(user);
-        return ResponseEntity.ok(pdfs.stream()
-                .map(pdfMetadataMapper::pdfMetadataToPdfMetadataDto)
-                .collect(Collectors.toList()));
+        return ResponseEntity.ok(pdfs.stream().map(pdfMetadataMapper::pdfMetadataToPdfMetadataDto).collect(Collectors.toList()));
     }
-
 }
 
 
