@@ -60,8 +60,6 @@ public class WebSecurityConfig {
         configuration.setAllowedOrigins(List.of(
                 lienDuSite,
                 baseUrl
-//                "https://sol-solution-qrcode.vercel.app",
-//                "http://localhost:4200"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
