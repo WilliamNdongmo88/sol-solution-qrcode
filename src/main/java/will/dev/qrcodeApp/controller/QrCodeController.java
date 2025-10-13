@@ -6,6 +6,7 @@ import com.google.firebase.cloud.StorageClient;
 import com.google.zxing.WriterException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.client.RestTemplate;
+import will.dev.qrcodeApp.config.FirebaseInitializer;
 import will.dev.qrcodeApp.dto.QrCodeGenerationResponse;
 import will.dev.qrcodeApp.entity.QrCodeMetadata;
 import will.dev.qrcodeApp.service.QrCodeService;
@@ -64,7 +65,7 @@ public class QrCodeController {
 //                    System.out.println("📥 Nouveau logo sauvegardé : " + logoPath);
 //                }
 //            }
-
+            FirebaseInitializer.initialize();
             QrCodeMetadata qrCodeMetadata = qrCodeService.generateQrCode(pdfId);
 
             String downloadUrl = baseUrl + "/api/qrcode/download/" + qrCodeMetadata.getUniqueId();
