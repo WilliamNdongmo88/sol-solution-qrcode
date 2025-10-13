@@ -81,13 +81,15 @@ public class DataInitializer implements CommandLineRunner {
 //        System.out.println("Synchronisation Firebase terminée !");
     }
 
+    /* Cette methode permet de récupérer le logo dans le dossier /uploads
+    et de le sauvegarder dans Firebase storage. NB: Utilisé uniquement en dev */
     // Alert : Cette methode ne doit pas être executé en prod
     // Rassuré vous de la commenter avant la mise en production
     public void syncLogoWithFirebase() throws IOException {
 
         FirebaseInitializer.initialize();
 
-        String uploadLogoDir = "C:/Users/DELL/Desktop/Projet/sol-solution2/back-end/uploads/logos";
+        String uploadLogoDir = "C:/Users/DELL/Desktop/Projet/Java/sol-solution/uploads/logos";
 
         File directory = new File(uploadLogoDir);
         System.out.println("directory :: " + directory.getAbsolutePath());
