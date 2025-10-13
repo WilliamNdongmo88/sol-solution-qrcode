@@ -55,27 +55,27 @@ public class BrevoService {
 
             // 3️⃣ Création du contenu du mail
             String subject = "Votre QR Code est prêt !";
-            String htmlContent = "<html><body>" +
-                    "<h2>Bonjour " + user.getNom() + ",</h2>" +
-                    "<p>Voici votre QR Code généré pour votre document :</p>" +
-                    "<p><b>Contenu :</b> " + qrContent + "</p>" +
-                    "<img src='" + qrCodeUrl + "' alt='QR Code' width='200'/>" +
-                    "<p>Vous pouvez aussi <a href='" + qrCodeUrl + "'>le télécharger ici</a>.</p>" +
-                    "<p>Merci d’utiliser notre service 💡</p>" +
-                    "</body></html>";
+//            String htmlContent = "<html><body>" +
+//                    "<h2>Bonjour " + user.getNom() + ",</h2>" +
+//                    "<p>Voici votre QR Code généré pour votre document :</p>" +
+//                    "<p><b>Contenu :</b> " + qrContent + "</p>" +
+//                    "<img src='" + qrCodeUrl + "' alt='QR Code' width='200'/>" +
+//                    "<p>Vous pouvez aussi <a href='" + qrCodeUrl + "'>le télécharger ici</a>.</p>" +
+//                    "<p>Merci d’utiliser notre service 💡</p>" +
+//                    "</body></html>";
 
-//            MimeMessage message = mailSender.createMimeMessage();
-//            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-//
-//            // Créer le contexte pour le template
-//            Context context = new Context();
-//            context.setVariable("userName", user.getNom());
-//            context.setVariable("qrContent", qrContent);
-//            context.setVariable("appName", senderName);
-//
-//            // Générer le contenu HTML
-//            String htmlContent = templateEngine.process("qrcode-email", context);
-//            helper.setText(htmlContent, true);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            // Créer le contexte pour le template
+            Context context = new Context();
+            context.setVariable("userName", user.getNom());
+            context.setVariable("qrContent", qrContent);
+            context.setVariable("appName", senderName);
+
+            // Générer le contenu HTML
+            String htmlContent = templateEngine.process("qrcode-email", context);
+            helper.setText(htmlContent, true);
 
             // 4️⃣ Configuration du mail
             SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
