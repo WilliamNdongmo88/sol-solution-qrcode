@@ -2,6 +2,7 @@ package will.dev.qrcodeApp.service;
 
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Bucket;
+import com.google.cloud.storage.Storage;
 import com.google.firebase.cloud.StorageClient;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -47,11 +48,16 @@ public class QrCodeService {
     private final EmailService emailService;
     private final BrevoService brevoService;
     private final FirebaseStorageService firebaseStorageService;
+    private final Storage storage;
+
     @Value("${app.qrcode.dir:uploads/qrcodes}")
     private String qrCodeDir;
 
     @Value("${app.base.url}")
     private String baseUrl;
+
+    @Value("${firebase.bucket-name}")
+    private String bucketName;
 
     @Transactional
     public QrCodeMetadata generateQrCode(String pdfUniqueId) throws Exception {
@@ -181,7 +187,11 @@ public class QrCodeService {
     }
 
     private BufferedImage getLogoFromFirebase(String logoFileName) throws IOException {
-        Bucket bucket = StorageClient.getInstance().bucket();
+        //Bucket bucket = StorageClient.getInstance().bucket();
+        Bucket bucket = storage.get(bucketName);
+        if (bucket == null) {
+            throw new IOException("❌ Bucket introuvable : " + bucketName);
+        }
         String fullPath = "logos/" + logoFileName;
         Blob blob = bucket.get(fullPath);
 
