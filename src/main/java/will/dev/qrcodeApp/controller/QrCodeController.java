@@ -65,7 +65,7 @@ public class QrCodeController {
 //                    System.out.println("📥 Nouveau logo sauvegardé : " + logoPath);
 //                }
 //            }
-            FirebaseInitializer.initialize();
+            //FirebaseInitializer.initialize();
             QrCodeMetadata qrCodeMetadata = qrCodeService.generateQrCode(pdfId);
 
             String downloadUrl = baseUrl + "/api/qrcode/download/" + qrCodeMetadata.getUniqueId();
