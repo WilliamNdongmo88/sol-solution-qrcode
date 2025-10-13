@@ -1,18 +1,15 @@
 package will.dev.qrcodeApp.controller;
 
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.Bucket;
+import com.google.firebase.cloud.StorageClient;
 import com.google.zxing.WriterException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.client.RestTemplate;
 import will.dev.qrcodeApp.dto.QrCodeGenerationResponse;
 import will.dev.qrcodeApp.entity.QrCodeMetadata;
-import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.service.QrCodeService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,15 +17,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/qrcode")
@@ -44,33 +39,33 @@ public class QrCodeController {
     public ResponseEntity<?> generateQrCode(@PathVariable String pdfId,
                                             @RequestParam(required = false) MultipartFile logo) {
         try {
-            String logoPath = null;
+//            String logoPath = null;
+//
+//            Path logoDir = Paths.get("uploads/logos");
+//            if (!Files.exists(logoDir)) {
+//                Files.createDirectories(logoDir);
+//            }
+//
+//            // 🔎 Vérifier si un logo existe déjà dans le dossier
+//            try (Stream<Path> files = Files.list(logoDir)) {
+//                Optional<Path> existingLogo = files
+//                        .filter(Files::isRegularFile) // garder uniquement les fichiers
+//                        .findFirst(); // prendre le premier trouvé
+//
+//                if (existingLogo.isPresent()) {
+//                    logoPath = existingLogo.get().toString();
+//                    System.out.println("✔ Logo déjà présent utilisé : " + logoPath);
+//                } else if (logo != null && !logo.isEmpty()) {
+//                    // Sinon, si aucun logo présent, on enregistre le nouveau
+//                    String logoFileName = UUID.randomUUID().toString() + "_" + logo.getOriginalFilename();
+//                    Path logoFilePath = logoDir.resolve(logoFileName);
+//                    Files.copy(logo.getInputStream(), logoFilePath);
+//                    logoPath = logoFilePath.toString();
+//                    System.out.println("📥 Nouveau logo sauvegardé : " + logoPath);
+//                }
+//            }
 
-            Path logoDir = Paths.get("uploads/logos");
-            if (!Files.exists(logoDir)) {
-                Files.createDirectories(logoDir);
-            }
-
-            // 🔎 Vérifier si un logo existe déjà dans le dossier
-            try (Stream<Path> files = Files.list(logoDir)) {
-                Optional<Path> existingLogo = files
-                        .filter(Files::isRegularFile) // garder uniquement les fichiers
-                        .findFirst(); // prendre le premier trouvé
-
-                if (existingLogo.isPresent()) {
-                    logoPath = existingLogo.get().toString();
-                    System.out.println("✔ Logo déjà présent utilisé : " + logoPath);
-                } else if (logo != null && !logo.isEmpty()) {
-                    // Sinon, si aucun logo présent, on enregistre le nouveau
-                    String logoFileName = UUID.randomUUID().toString() + "_" + logo.getOriginalFilename();
-                    Path logoFilePath = logoDir.resolve(logoFileName);
-                    Files.copy(logo.getInputStream(), logoFilePath);
-                    logoPath = logoFilePath.toString();
-                    System.out.println("📥 Nouveau logo sauvegardé : " + logoPath);
-                }
-            }
-
-            QrCodeMetadata qrCodeMetadata = qrCodeService.generateQrCode(pdfId, logoPath);
+            QrCodeMetadata qrCodeMetadata = qrCodeService.generateQrCode(pdfId);
 
             String downloadUrl = baseUrl + "/api/qrcode/download/" + qrCodeMetadata.getUniqueId();
 
@@ -93,7 +88,6 @@ public class QrCodeController {
             throw new RuntimeException(e);
         }
     }
-
 
     @GetMapping("/download/{qrCodeId}")
     public ResponseEntity<byte[]> downloadQrCode(@PathVariable String qrCodeId) {

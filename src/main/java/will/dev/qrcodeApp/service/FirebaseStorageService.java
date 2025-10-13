@@ -36,6 +36,21 @@ public class FirebaseStorageService {
         return String.format("https://storage.googleapis.com/%s/%s", bucketName, destinationPath);
     }
 
+    public String uploadLogo(byte[] imageBytes, String name) throws IOException {
+        String destinationPath = "logos/" + name + ".png";
+
+        BlobId blobId = BlobId.of(bucketName, destinationPath);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType("image/png") // Spécifique pour les images PNG
+                .build();
+
+        // Uploader le tableau d'octets directement
+        storage.create(blobInfo, imageBytes);
+
+        // Construire l'URL publique
+        return String.format("https://storage.googleapis.com/%s/%s", bucketName, destinationPath);
+    }
+
     public String uploadImage(byte[] imageBytes, String uniqueId) throws IOException {
         String destinationPath = "qrcodes/" + uniqueId + ".png";
 

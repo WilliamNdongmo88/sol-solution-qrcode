@@ -1,10 +1,12 @@
 package will.dev.qrcodeApp.service;
 
+import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Bucket;
 import com.google.firebase.cloud.StorageClient;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
@@ -22,14 +24,11 @@ import will.dev.qrcodeApp.repository.QrCodeMetadataRepository;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.sql.Blob;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -55,7 +54,7 @@ public class QrCodeService {
     private String baseUrl;
 
     @Transactional
-    public QrCodeMetadata generateQrCode(String pdfUniqueId, String logoPath) throws Exception {
+    public QrCodeMetadata generateQrCode(String pdfUniqueId) throws Exception {
         // Vérification que le PDF existe
         PdfMetadata pdfMetadata = pdfMetadataRepository.findByUniqueId(pdfUniqueId)
                 .orElseThrow(() -> new IllegalArgumentException("PDF non trouvé avec l'ID unique: " + pdfUniqueId));
@@ -72,7 +71,8 @@ public class QrCodeService {
         String qrContent = baseUrl + "/api/pdf/view/" + pdfUniqueId;
 
         // 2. Génération de l'image QR code EN MÉMOIRE
-        byte[] qrCodeBytes = generateQrCodeImageBytes(qrContent, 300, 300, logoPath);
+        String logoFileName = "Logo-SSAC.jpg.png"; // Le nom du fichier dans firebase storage
+        byte[] qrCodeBytes = generateQrCodeImageBytes(qrContent, 300, 300, logoFileName);
 
         // 3. Upload de l'image sur Firebase Storage
         String qrCodeFirebaseUrl = firebaseStorageService.uploadImage(qrCodeBytes, qrCodeUniqueId);
@@ -108,53 +108,89 @@ public class QrCodeService {
         return savedQrCode;
     }
 
-    private byte[] generateQrCodeImageBytes(String text, int width, int height, String logoPath) throws WriterException, IOException {
+    public byte[] generateQrCodeImageBytes(String text, int width, int height, String logoFileName) throws WriterException, IOException {
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
 
         Map<EncodeHintType, Object> hints = new HashMap<>();
-        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H); // Utiliser H pour une meilleure correction d'erreur avec logo
+        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
         hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
 
         BitMatrix bitMatrix = qrCodeWriter.encode(text, BarcodeFormat.QR_CODE, width, height, hints);
 
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        image.createGraphics();
+        // ✅ Image avec transparence (ARGB)
+        BufferedImage qrImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = qrImage.createGraphics();
 
-        Graphics2D graphics = (Graphics2D) image.getGraphics();
-        graphics.setColor(Color.WHITE);
-        graphics.fillRect(0, 0, width, height);
-        graphics.setColor(Color.BLACK); // Couleur du QR code
+        // Active l’antialiasing et la qualité du rendu
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-        for (int i = 0; i < bitMatrix.getWidth(); i++) {
-            for (int j = 0; j < bitMatrix.getHeight(); j++) {
-                if (bitMatrix.get(i, j)) {
-                    graphics.fillRect(i, j, 1, 1);
+        // Fond blanc transparent
+        g.setColor(new Color(255, 255, 255, 255));
+        g.fillRect(0, 0, width, height);
+
+        // 🔸 Couleur du QR code (gris foncé au lieu de noir)
+        Color qrColor = new Color(30, 30, 30); // gris doux
+        g.setColor(qrColor);
+
+        // Dessin du QR code
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                if (bitMatrix.get(x, y)) {
+                    g.fillRect(x, y, 1, 1);
                 }
             }
         }
 
-        if (logoPath != null && !logoPath.isEmpty()) {
-            File logoFile = new File(logoPath);
-            if (logoFile.exists()) {
-                BufferedImage logoImage = ImageIO.read(logoFile);
-                if (logoImage != null) {
-                    int logoWidth = width / 4; // Taille du logo (ex: 1/4 de la taille du QR code)
+        // 🔹 Ajout du logo sans perte de couleurs
+        if (logoFileName != null && !logoFileName.isEmpty()) {
+            try {
+                BufferedImage logo = getLogoFromFirebase(logoFileName);
+                if (logo != null) {
+                    int logoWidth = width / 4;
                     int logoHeight = height / 4;
                     int x = (width - logoWidth) / 2;
                     int y = (height - logoHeight) / 2;
 
-                    graphics.drawImage(logoImage, x, y, logoWidth, logoHeight, null);
+                    g.setComposite(AlphaComposite.SrcOver);
+                    g.drawImage(logo, x, y, logoWidth, logoHeight, null);
                 }
+            } catch (IOException e) {
+                System.out.println("⚠️ Impossible de récupérer le logo depuis Firebase : " + e.getMessage());
             }
         }
 
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            // Écrit l'image finale au format PNG dans le flux en mémoire
-            ImageIO.write(image, "PNG", baos);
+        // ✅ Bordures arrondies
+        int cornerRadius = 40; // rayon d'arrondi des coins
+        BufferedImage roundedQr = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = roundedQr.createGraphics();
 
-            // Retourne le contenu du flux sous forme de tableau d'octets
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Masque arrondi
+        g2.setClip(new RoundRectangle2D.Double(1, 1, width, height, cornerRadius, cornerRadius));
+        g2.drawImage(qrImage, 1, 1, null);
+        g2.dispose();
+        g.dispose();
+
+        // 🔸 Conversion finale en byte[]
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ImageIO.write(roundedQr, "PNG", baos);
             return baos.toByteArray();
         }
+    }
+
+    private BufferedImage getLogoFromFirebase(String logoFileName) throws IOException {
+        Bucket bucket = StorageClient.getInstance().bucket();
+        String fullPath = "logos/" + logoFileName;
+        Blob blob = bucket.get(fullPath);
+
+        if (blob == null) {
+            throw new IOException("❌ Le fichier " + fullPath + " n'existe pas dans Firebase Storage.");
+        }
+
+        byte[] bytes = blob.getContent();
+        return ImageIO.read(new ByteArrayInputStream(bytes));
     }
 
     public byte[] getQrCodeBytesFromFirebase(String qrCodeUrl) throws Exception {

@@ -1,5 +1,6 @@
 package will.dev.qrcodeApp.controller;
 
+import com.google.api.client.util.Value;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -16,9 +17,11 @@ import will.dev.qrcodeApp.dto.PdfMetadataDto;
 import will.dev.qrcodeApp.entity.PdfMetadata;
 import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.mapper.PdfMetadataMapper;
+import will.dev.qrcodeApp.service.FirebaseStorageService;
 import will.dev.qrcodeApp.service.PdfService;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.DirectoryStream;
@@ -34,8 +37,12 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*")
 public class PdfController {
 
+    @Value("${app.logos.dir}")
+    private String uploadLogoDir;
+
     private final PdfService pdfService;
     private final PdfMetadataMapper pdfMetadataMapper;
+    private final FirebaseStorageService firebaseStorageService;
 
     @PostMapping("/upload")
     @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
@@ -47,7 +54,7 @@ public class PdfController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("❌ Erreur serveur : " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Erreur serveur : " + e.getMessage());
         }
     }
 

@@ -1,0 +1,33 @@
+package will.dev.qrcodeApp.config;
+
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.cloud.StorageClient;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+
+public class FirebaseInitializer {
+
+    @Value("${firebase.bucket-name}")
+    private String bucketName;
+
+    public static void initialize() throws IOException {
+        // Vérifie si Firebase n'a pas déjà été initialisé
+        if (FirebaseApp.getApps().isEmpty()) {
+            FileInputStream serviceAccount =
+                    new FileInputStream("src/main/resources/firebase/serviceAccountKey.json"); // Chemin vers ton fichier JSON
+
+            FirebaseOptions options = FirebaseOptions.builder()
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .setStorageBucket("solsolutionpdf.firebasestorage.app") // Remplace par ton bucket
+                    .build();
+
+            FirebaseApp.initializeApp(options);
+            System.out.println("✅ FirebaseApp initialisé avec succès !");
+        }
+    }
+}
+
