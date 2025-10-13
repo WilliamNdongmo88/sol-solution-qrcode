@@ -40,31 +40,6 @@ public class QrCodeController {
     public ResponseEntity<?> generateQrCode(@PathVariable String pdfId,
                                             @RequestParam(required = false) MultipartFile logo) {
         try {
-//            String logoPath = null;
-//
-//            Path logoDir = Paths.get("uploads/logos");
-//            if (!Files.exists(logoDir)) {
-//                Files.createDirectories(logoDir);
-//            }
-//
-//            // 🔎 Vérifier si un logo existe déjà dans le dossier
-//            try (Stream<Path> files = Files.list(logoDir)) {
-//                Optional<Path> existingLogo = files
-//                        .filter(Files::isRegularFile) // garder uniquement les fichiers
-//                        .findFirst(); // prendre le premier trouvé
-//
-//                if (existingLogo.isPresent()) {
-//                    logoPath = existingLogo.get().toString();
-//                    System.out.println("✔ Logo déjà présent utilisé : " + logoPath);
-//                } else if (logo != null && !logo.isEmpty()) {
-//                    // Sinon, si aucun logo présent, on enregistre le nouveau
-//                    String logoFileName = UUID.randomUUID().toString() + "_" + logo.getOriginalFilename();
-//                    Path logoFilePath = logoDir.resolve(logoFileName);
-//                    Files.copy(logo.getInputStream(), logoFilePath);
-//                    logoPath = logoFilePath.toString();
-//                    System.out.println("📥 Nouveau logo sauvegardé : " + logoPath);
-//                }
-//            }
             //FirebaseInitializer.initialize();
             QrCodeMetadata qrCodeMetadata = qrCodeService.generateQrCode(pdfId);
 

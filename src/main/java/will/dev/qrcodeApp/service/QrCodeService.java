@@ -187,7 +187,6 @@ public class QrCodeService {
     }
 
     private BufferedImage getLogoFromFirebase(String logoFileName) throws IOException {
-        //Bucket bucket = StorageClient.getInstance().bucket();
         Bucket bucket = storage.get(bucketName);
         if (bucket == null) {
             throw new IOException("❌ Bucket introuvable : " + bucketName);

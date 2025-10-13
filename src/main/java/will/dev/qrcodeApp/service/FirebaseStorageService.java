@@ -37,7 +37,7 @@ public class FirebaseStorageService {
     }
 
     public String uploadLogo(byte[] imageBytes, String name) throws IOException {
-        String destinationPath = "logos/" + name + ".png";
+        String destinationPath = "logos/" + name;
 
         BlobId blobId = BlobId.of(bucketName, destinationPath);
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
