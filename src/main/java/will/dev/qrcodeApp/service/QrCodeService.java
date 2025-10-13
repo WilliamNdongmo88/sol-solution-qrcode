@@ -7,6 +7,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class QrCodeService {
@@ -47,7 +49,7 @@ public class QrCodeService {
     private String baseUrl;
 
     @Transactional
-    public QrCodeMetadata generateQrCode(String pdfUniqueId, String logoPath) throws IOException, WriterException {
+    public QrCodeMetadata generateQrCode(String pdfUniqueId, String logoPath) throws Exception {
         // Vérification que le PDF existe
         PdfMetadata pdfMetadata = pdfMetadataRepository.findByUniqueId(pdfUniqueId)
                 .orElseThrow(() -> new IllegalArgumentException("PDF non trouvé avec l'ID unique: " + pdfUniqueId));
@@ -90,7 +92,11 @@ public class QrCodeService {
         userActionService.logAction(pdfMetadata.getUser(), UserAction.TypeAction.GENERATION_QR, "QR Code généré pour le PDF " + savedQrCode.getPdfMetadata().getOriginalFilename());
 
         // Envoyer le QR code par email
-        brevoService.sendQrCodeEmail(pdfMetadata.getUser(), qrCodeFirebaseUrl, qrContent);
+        try {
+            brevoService.sendQrCodeEmail(pdfMetadata.getUser(), qrCodeFirebaseUrl, qrContent);
+        } catch (Exception e) {
+            log.error("Erreur lors de l'envoi de l'email Brevo: {}", e.getMessage());
+        }
 
         return savedQrCode;
     }

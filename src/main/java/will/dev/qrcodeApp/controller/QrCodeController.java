@@ -89,6 +89,8 @@ public class QrCodeController {
         } catch (IOException | WriterException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erreur lors de la génération du QR Code: " + e.getMessage());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

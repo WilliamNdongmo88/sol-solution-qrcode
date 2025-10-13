@@ -1,10 +1,10 @@
 package will.dev.qrcodeApp.service;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -20,98 +20,79 @@ import will.dev.qrcodeApp.entity.User;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.Collections;
 
 @Service
 public class BrevoService {
 
+    @Value("${brevo.api.key}")
+    private String apiKey;
+
+    @Value("${brevo.sender.email}")
+    private String senderEmail;
+
+    @Value("${brevo.sender.name}")
+    private String senderName;
+
+    @Autowired
+    private JavaMailSender mailSender;
+
     @Autowired
     private TemplateEngine templateEngine;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
-
-    @Value("${app.name:SSAC QR Code App}")
-    private String appName;
-
-    @Value("${app.env.apiUrl}")
-    private String apiUrl;
-
-    @Value("${app.env.apiKey}")
-    private String brevoApiKey;
-
-    @Autowired
-    private RestTemplate restTemplate;
-
     /**
-     * Envoie un e-mail HTML avec QR code en pièce jointe via Brevo (API)
+     * Envoyer un email avec le QR code généré
      */
     public void sendQrCodeEmail(User user, String qrCodeUrl, String qrContent) {
         try {
-            // ⚙️ Configuration de l'API Brevo
+            // 1️⃣ Configuration du client Brevo
             ApiClient defaultClient = Configuration.getDefaultApiClient();
             ApiKeyAuth apiKeyAuth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
-            apiKeyAuth.setApiKey(brevoApiKey);
+            apiKeyAuth.setApiKey(apiKey);
 
-            TransactionalEmailsApi apiInstance = new TransactionalEmailsApi();
+            // 2️⃣ Instanciation de l’API TransactionalEmailsApi
+            TransactionalEmailsApi emailApi = new TransactionalEmailsApi();
 
-            // 👤 Expéditeur et 📩 Destinataire (inchangé)
-            SendSmtpEmailSender sender = new SendSmtpEmailSender().name(appName).email(fromEmail);
-            SendSmtpEmailTo recipient = new SendSmtpEmailTo().email(user.getEmail()).name(user.getNom());
+            // 3️⃣ Création du contenu du mail
+            String subject = "Votre QR Code est prêt !";
+//            String htmlContent = "<html><body>" +
+//                    "<h2>Bonjour " + user.getNom() + ",</h2>" +
+//                    "<p>Voici votre QR Code généré pour votre document :</p>" +
+//                    "<p><b>Contenu :</b> " + qrContent + "</p>" +
+//                    "<img src='" + qrCodeUrl + "' alt='QR Code' width='200'/>" +
+//                    "<p>Vous pouvez aussi <a href='" + qrCodeUrl + "'>le télécharger ici</a>.</p>" +
+//                    "<p>Merci d’utiliser notre service 💡</p>" +
+//                    "</body></html>";
 
-            // --- DÉBUT DE LA MODIFICATION CLÉ ---
-            // 💾 Téléchargement de l'image du QR code depuis son URL
-            byte[] qrBytes = restTemplate.getForObject(qrCodeUrl, byte[].class);
-            String qrBase64 = "";
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            if (qrBytes != null && qrBytes.length > 0) {
-                // Encodage des octets téléchargés en Base64
-                qrBase64 = Base64.getEncoder().encodeToString(qrBytes);
-            } else {
-                System.err.println("⚠️ Le téléchargement du QR code depuis l'URL a échoué ou le fichier est vide.");
-            }
-            // --- FIN DE LA MODIFICATION CLÉ ---
+            // Créer le contexte pour le template
+            Context context = new Context();
+            context.setVariable("userName", user.getNom());
+            context.setVariable("qrContent", qrContent);
+            context.setVariable("appName", senderName);
 
-            // 🎨 Contenu HTML du message (inchangé)
-            String htmlContent = """
-            <html>
-                <body style="font-family: Arial, sans-serif; color:#333;">
-                    <h2>Bonjour %s 👋</h2>
-                    <p>Voici votre QR Code généré par <strong>%s</strong>.</p>
-                    <p>Contenu du QR : <code>%s</code></p>
-                    <p>Vous trouverez le QR code en pièce jointe.</p>
-                    <hr/>
-                    <small>Ceci est un message automatique, merci de ne pas répondre.</small>
-                </body>
-            </html>
-            """.formatted(user.getNom(), appName, qrContent);
+            // Générer le contenu HTML
+            String htmlContent = templateEngine.process("qrcode-email", context);
+            helper.setText(htmlContent, true);
 
-            // 📎 Pièce jointe (logique inchangée, mais maintenant plus fiable)
-            List<SendSmtpEmailAttachment> attachments = null;
-            if (!qrBase64.isEmpty()) {
-                attachments = List.of(
-                        new SendSmtpEmailAttachment()
-                                .name("qrcode.png")
-                                .content(qrBase64.getBytes())
-                                //.contentType("image/png") // Optionnel mais recommandé
-                );
-            }
+            // 4️⃣ Configuration du mail
+            SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
+            sendSmtpEmail.setSender(new SendSmtpEmailSender()
+                    .email(senderEmail)
+                    .name(senderName));
+            sendSmtpEmail.setTo(Collections.singletonList(new SendSmtpEmailTo().email(user.getEmail())));
+            sendSmtpEmail.setSubject(subject);
+            sendSmtpEmail.setHtmlContent(htmlContent);
 
-            // 📨 Construction et 🚀 Envoi de l'email (inchangé)
-            SendSmtpEmail email = new SendSmtpEmail()
-                    .sender(sender)
-                    .to(List.of(recipient))
-                    .subject("Votre QR Code généré - " + appName)
-                    .htmlContent(htmlContent)
-                    .attachment(attachments);
-
-            apiInstance.sendTransacEmail(email);
-            System.out.println("✅ Email Brevo envoyé à " + user.getEmail());
+            // 5️⃣ Envoi du mail
+            emailApi.sendTransacEmail(sendSmtpEmail);
+            System.out.println("✅ Email envoyé avec succès à " + user.getEmail());
 
         } catch (Exception e) {
-            System.err.println("❌ Erreur lors de l'envoi Brevo : " + e.getMessage());
-            throw new RuntimeException("Erreur d'envoi de l'email via Brevo", e);
+            System.err.println("❌ Erreur lors de l’envoi du mail Brevo : " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
