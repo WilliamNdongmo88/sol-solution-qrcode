@@ -1,5 +1,7 @@
 package will.dev.qrcodeApp.service;
 
+import com.google.cloud.storage.Bucket;
+import com.google.firebase.cloud.StorageClient;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
@@ -24,6 +26,10 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.sql.Blob;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -93,7 +99,8 @@ public class QrCodeService {
 
         // Envoyer le QR code par email
         try {
-            brevoService.sendQrCodeEmail(pdfMetadata.getUser(), qrCodeFirebaseUrl, qrContent);
+            byte[] qrBytes = getQrCodeBytesFromFirebase(qrCodeFirebaseUrl);
+            brevoService.sendQrCodeEmail(pdfMetadata.getUser(), qrContent, qrBytes);
         } catch (Exception e) {
             log.error("Erreur lors de l'envoi de l'email Brevo: {}", e.getMessage());
         }
@@ -147,6 +154,28 @@ public class QrCodeService {
 
             // Retourne le contenu du flux sous forme de tableau d'octets
             return baos.toByteArray();
+        }
+    }
+
+    public byte[] getQrCodeBytesFromFirebase(String qrCodeUrl) throws Exception {
+        URL url = new URL(qrCodeUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.connect();
+
+        if (connection.getResponseCode() != 200) {
+            throw new IllegalArgumentException("Impossible de récupérer le fichier depuis Firebase : " + connection.getResponseCode());
+        }
+
+        try (InputStream inputStream = connection.getInputStream();
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            return outputStream.toByteArray();
         }
     }
 
