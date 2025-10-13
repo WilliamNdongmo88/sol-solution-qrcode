@@ -76,10 +76,11 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // Initialisation existante
-        System.out.println("Initialisation des données...");
-        syncLogoWithFirebase();
-        System.out.println("Synchronisation Firebase terminée !");
+//        System.out.println("Initialisation des données...");
+//        syncLogoWithFirebase();
+//        System.out.println("Synchronisation Firebase terminée !");
     }
+
     public void syncLogoWithFirebase() throws IOException {
 
         FirebaseInitializer.initialize();
