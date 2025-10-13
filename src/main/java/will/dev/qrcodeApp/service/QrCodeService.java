@@ -30,12 +30,11 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -77,7 +76,7 @@ public class QrCodeService {
         String qrContent = baseUrl + "/api/pdf/view/" + pdfUniqueId;
 
         // 2. Génération de l'image QR code EN MÉMOIRE
-        String logoFileName = "Logo-SSAC.jpg.png"; // Le nom du fichier dans firebase storage
+        String logoFileName = "Logo-SSAC.jpg"; // Le nom du fichier dans firebase storage
         byte[] qrCodeBytes = generateQrCodeImageBytes(qrContent, 300, 300, logoFileName);
 
         // 3. Upload de l'image sur Firebase Storage
@@ -148,7 +147,21 @@ public class QrCodeService {
             }
         }
 
+        // Vérification si le nom du fichier sélectionné a l'initialisation de l'application
+        // est identique a celui dans firebase storage
+        Boolean existingFileName = checkFile(logoFileName);
+        if (existingFileName) {
+            System.out.println("✅ Logo Déjà présent sur Firebase ! ");
+        }else {
+            System.out.println("✅ Le logo est absent sur Firebase ! ");
+            throw new RuntimeException("ERROR From [QrCodeService.generateQrCodeImageBytes] :" +
+                    " Vérifier la presence du fichier dans Firebase Storage et si le nom du fichier" +
+                    "correspond bien a celui indiqué a la ligne 79 (String logoFileName = \"Logo-SSAC.jpg\";)" +
+                    "de cette même classe [QrCodeService]");
+        }
+
         // 🔹 Ajout du logo sans perte de couleurs
+        System.out.println("logoFileName :: "+ logoFileName);
         if (logoFileName != null && !logoFileName.isEmpty()) {
             try {
                 BufferedImage logo = getLogoFromFirebase(logoFileName);
@@ -221,6 +234,19 @@ public class QrCodeService {
                 outputStream.write(buffer, 0, bytesRead);
             }
             return outputStream.toByteArray();
+        }
+    }
+
+    public Boolean checkFile(String fileName) {
+        String bucketName = "solsolutionpdf.firebasestorage.app";
+        String folder = "logos";
+
+        boolean exists = firebaseStorageService.fileExists(folder, fileName, bucketName);
+
+        if (exists) {
+            return true;
+        } else {
+            return false;
         }
     }
 

@@ -76,14 +76,16 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // Initialisation existante
-        System.out.println("Initialisation des données...");
-        syncLogoWithFirebase();
-        System.out.println("Synchronisation Firebase terminée !");
+//        System.out.println("Initialisation des données...");
+//        syncLogoWithFirebase();
+//        System.out.println("Synchronisation Firebase terminée !");
     }
 
+    // Alert : Cette methode ne doit pas être executé en prod
+    // Rassuré vous de la commenter avant la mise en production
     public void syncLogoWithFirebase() throws IOException {
 
-        //FirebaseInitializer.initialize();
+        FirebaseInitializer.initialize();
 
         String uploadLogoDir = "C:/Users/DELL/Desktop/Projet/sol-solution2/back-end/uploads/logos";
 

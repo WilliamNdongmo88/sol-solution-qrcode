@@ -1,5 +1,6 @@
 package will.dev.qrcodeApp.service;
 
+import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
@@ -64,6 +65,22 @@ public class FirebaseStorageService {
 
         // Construire l'URL publique
         return String.format("https://storage.googleapis.com/%s/%s", bucketName, destinationPath);
+    }
+
+    public boolean fileExists(String folderName, String fileName, String bucketName) {
+        try {
+            // 🔹 Construire le chemin complet (ex: "logos/Logo-SSAC.png")
+            String filePath = folderName != null && !folderName.isEmpty()
+                    ? folderName + "/" + fileName
+                    : fileName;
+
+            Blob blob = storage.get(bucketName, filePath);
+            return blob != null && blob.exists();
+
+        } catch (Exception e) {
+            System.err.println("⚠️ Erreur lors de la vérification du fichier : " + e.getMessage());
+            return false;
+        }
     }
 
     /**
