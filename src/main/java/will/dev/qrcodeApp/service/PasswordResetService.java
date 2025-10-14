@@ -20,7 +20,7 @@ public class PasswordResetService {
 
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final UserRepository userRepository;
-    private final EmailService emailService;
+    private final BrevoService brevoService;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -46,7 +46,7 @@ public class PasswordResetService {
         passwordResetTokenRepository.save(resetToken);
 
         // Envoyer l'email de réinitialisation
-        emailService.sendPasswordResetEmail(user.getEmail(), user.getNom(), token);
+        brevoService.sendPasswordResetEmail(user.getEmail(), user.getNom(), token);
 
         return token;
     }

@@ -20,7 +20,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserActionService userActionService;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
+    private final BrevoService brevoService;
 
     /**
      * Créer un nouvel utilisateur
@@ -43,13 +43,13 @@ public class UserService {
             user.setCodeAcces(codeAcces);
             user.setPassword(null); // Les utilisateurs normaux se connectent avec le code d'accès
             // Envoyer l'email avec le code d'accès
-            emailService.sendWelcomeEmail(user, codeAcces); // Envoyer le code d'accès au lieu du mot de passe temporaire
+            brevoService.sendWelcomeEmail(user, codeAcces); // Envoyer le code d'accès au lieu du mot de passe temporaire
         } else { // ADMIN ou MANAGER
             String tempPassword = (password != null && !password.isEmpty()) ? password : generateTemporaryPassword();
             user.setPassword(passwordEncoder.encode(tempPassword));
             user.setCodeAcces(null);
             // Envoyer l'email avec le mot de passe temporaire
-            emailService.sendWelcomeEmail(user, tempPassword); // Envoyer le mot de passe temporaire
+            brevoService.sendWelcomeEmail(user, tempPassword); // Envoyer le mot de passe temporaire
         }
 
         user = userRepository.save(user);
@@ -76,9 +76,9 @@ public class UserService {
         if ((newRole == User.Role.ADMIN || newRole == User.Role.MANAGER) && user.getPassword() == null) {
             String tempPassword = generateTemporaryPassword();
             user.setPassword(passwordEncoder.encode(tempPassword));
-            emailService.sendRoleChangeNotification(user, oldRole.name(), newRole.name(), tempPassword); // Envoyer le nouveau mot de passe
+            brevoService.sendRoleChangeNotification(user, oldRole.name(), newRole.name(), tempPassword); // Envoyer le nouveau mot de passe
         } else {
-            emailService.sendRoleChangeNotification(user, oldRole.name(), newRole.name(), null); // Pas de nouveau mot de passe à envoyer
+            brevoService.sendRoleChangeNotification(user, oldRole.name(), newRole.name(), null); // Pas de nouveau mot de passe à envoyer
         }
 
         user = userRepository.save(user);
@@ -109,7 +109,7 @@ public class UserService {
         userActionService.logAction(user, actionType,
                 (user.getActif() ? "Activation" : "Désactivation") + " du compte " + user.getEmail());
 
-        emailService.sendStatusChangeNotification(user, user.getActif());
+        brevoService.sendStatusChangeNotification(user, user.getActif());
 
         return user;
     }
@@ -215,7 +215,7 @@ public class UserService {
         user.setCodeAcces(newCode);
         userRepository.save(user);
         Boolean isReset = true;
-        emailService.sendWelcomeEmail(user, newCode, isReset);
+        brevoService.sendWelcomeEmail(user, newCode, isReset);
 
         return "Régénération d'un nouveau code d'accès réussi : " + newCode;
     }

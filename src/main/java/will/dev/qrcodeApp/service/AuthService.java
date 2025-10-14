@@ -20,7 +20,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final EmailService emailService;
+    private final BrevoService brevoService;
 
     public String register(User request) {
         User user = new User();
@@ -65,7 +65,7 @@ public class AuthService {
         String code = UUID.randomUUID().toString().substring(0, 8).toUpperCase(); // Générer un code court
         user.setCodeAcces(code);
         userRepository.save(user);
-        emailService.sendWelcomeEmail(user, code); // Réutiliser le template de bienvenue pour envoyer le code
+        brevoService.sendWelcomeEmail(user, code); // Réutiliser le template de bienvenue pour envoyer le code
     }
 }
 
