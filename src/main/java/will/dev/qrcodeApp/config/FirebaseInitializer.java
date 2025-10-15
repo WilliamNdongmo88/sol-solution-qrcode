@@ -14,7 +14,7 @@ public class FirebaseInitializer {
     @Value("${firebase.bucket-name}")
     private String bucketName;
 
-    public static void initialize() throws IOException {
+    public void initialize() throws IOException {
         // Vérifie si Firebase n'a pas déjà été initialisé
         if (FirebaseApp.getApps().isEmpty()) {
             FileInputStream serviceAccount =
@@ -22,7 +22,7 @@ public class FirebaseInitializer {
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .setStorageBucket("solsolutionpdf.firebasestorage.app") // Remplace par ton bucket
+                    .setStorageBucket(bucketName) // Remplace par ton bucket
                     .build();
 
             FirebaseApp.initializeApp(options);

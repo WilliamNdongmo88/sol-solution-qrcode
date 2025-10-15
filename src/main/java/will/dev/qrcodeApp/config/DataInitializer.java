@@ -33,6 +33,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final FirebaseStorageService firebaseStorageService;
+    private final FirebaseInitializer firebaseInitializer;
 
     @Override
     public void run(String... args) throws Exception {
@@ -87,7 +88,7 @@ public class DataInitializer implements CommandLineRunner {
     // Rassuré vous de la commenter avant la mise en production
     public void syncLogoWithFirebase() throws IOException {
 
-        FirebaseInitializer.initialize();
+        firebaseInitializer.initialize();
 
         String uploadLogoDir = "C:/Users/DELL/Desktop/Projet/Java/sol-solution/uploads/logos";
 

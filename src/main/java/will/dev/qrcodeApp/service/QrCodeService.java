@@ -238,9 +238,7 @@ public class QrCodeService {
     }
 
     public Boolean checkFile(String fileName) {
-        String bucketName = "solsolutionpdf.firebasestorage.app";
         String folder = "logos";
-
         boolean exists = firebaseStorageService.fileExists(folder, fileName, bucketName);
 
         if (exists) {
