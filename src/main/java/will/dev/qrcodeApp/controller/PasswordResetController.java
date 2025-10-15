@@ -1,6 +1,7 @@
 package will.dev.qrcodeApp.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -11,6 +12,7 @@ import will.dev.qrcodeApp.service.PasswordResetService;
 
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth/password-reset")
 @RequiredArgsConstructor
@@ -41,6 +43,8 @@ public class PasswordResetController {
         try {
             String token = request.get("token");
             String newPassword = request.get("newPassword");
+            log.info("### ### [resetPassword] token :: {}", token);
+            log.info("### ### [resetPassword] newPassword :: :: {}", newPassword);
             
             boolean success = passwordResetService.resetPassword(token, newPassword);
             if (success) {

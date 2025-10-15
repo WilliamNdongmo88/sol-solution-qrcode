@@ -47,7 +47,7 @@ public class PasswordResetService {
 
         // Envoyer l'email de réinitialisation
         brevoService.sendPasswordResetEmail(user.getEmail(), user.getNom(), token);
-        System.out.println("### [doFilterInternal] user.getEmail() :: "+ user.getEmail());
+        System.out.println("### [createPasswordResetToken] user.getEmail() :: "+ user.getEmail());
 
         return token;
     }
@@ -63,7 +63,7 @@ public class PasswordResetService {
 
         PasswordResetToken resetToken = tokenOpt.get();
         User user = resetToken.getUser();
-        System.out.println("### [resetPassword] userEmail :: "+ user.getEmail());
+        System.out.println("### [resetPassword] user Email :: "+ user.getEmail());
 
         // Mettre à jour le mot de passe
         user.setPassword(passwordEncoder.encode(newPassword));
