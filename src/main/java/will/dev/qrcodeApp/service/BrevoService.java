@@ -73,8 +73,6 @@ public class BrevoService {
             context.setVariable("tempPassword", user.getPassword());
             context.setVariable("appName", senderName);
             context.setVariable("role", user.getRole().toString());
-            context.setVariable("homeUrl", apiUrl+"/home");
-
 
             // Générer le contenu HTML
             String htmlContent = templateEngine.process("welcome-email", context);
