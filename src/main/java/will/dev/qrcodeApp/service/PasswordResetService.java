@@ -47,6 +47,7 @@ public class PasswordResetService {
 
         // Envoyer l'email de réinitialisation
         brevoService.sendPasswordResetEmail(user.getEmail(), user.getNom(), token);
+        System.out.println("### [doFilterInternal] user.getEmail() :: "+ user.getEmail());
 
         return token;
     }
