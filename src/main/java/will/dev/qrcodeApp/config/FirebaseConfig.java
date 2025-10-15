@@ -34,7 +34,7 @@ public class FirebaseConfig {
         System.out.println("privateKey :: "+privateKey.substring(0, 50));
         // 🔹 Construire le JSON attendu par GoogleCredentials
         JsonObject json = new JsonObject();
-        json.addProperty("type", "service_account");
+        json.addProperty("type", type);
         json.addProperty("project_id", projectId);
         json.addProperty("private_key_id", privateKeyId);
         json.addProperty("private_key", privateKey);
