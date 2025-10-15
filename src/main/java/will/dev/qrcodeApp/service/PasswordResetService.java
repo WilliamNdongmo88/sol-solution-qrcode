@@ -62,6 +62,7 @@ public class PasswordResetService {
 
         PasswordResetToken resetToken = tokenOpt.get();
         User user = resetToken.getUser();
+        System.out.println("### [resetPassword] userEmail :: "+ user.getEmail());
 
         // Mettre à jour le mot de passe
         user.setPassword(passwordEncoder.encode(newPassword));

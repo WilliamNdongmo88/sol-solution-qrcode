@@ -57,7 +57,6 @@ public class PasswordResetController {
     @PreAuthorize("hasAnyAuthority('USER','MANAGER','ADMIN')")
     public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        System.out.println("### [resetPassword] userEmail :: "+ user.getEmail());
         try {
             passwordResetService.changePassword(user, request);
             return ResponseEntity.ok(Map.of("message", "✅ Mot de passe modifié avec succès."));
