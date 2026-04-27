@@ -16,6 +16,7 @@ import will.dev.qrcodeApp.entity.PdfMetadata;
 import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.entity.UserAction;
 import will.dev.qrcodeApp.repository.PdfMetadataRepository;
+import will.dev.qrcodeApp.repository.UserActionRepository;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -37,6 +38,7 @@ public class PdfService {
 
     private final PdfMetadataRepository pdfMetadataRepository;
     private final UserActionService userActionService;
+    private final UserActionRepository userActionRepository;
     private final FirebaseStorageService firebaseStorageService;
     private final Storage storage;
 
@@ -76,6 +78,9 @@ public class PdfService {
         userActionService.logAction(
                 user,
                 UserAction.TypeAction.UPLOAD_PDF,
+                null,
+                uniqueId,
+                false,
                 "Upload du pdf :: " + pdfMetadata.getOriginalFilename()
         );
 
@@ -117,21 +122,24 @@ public class PdfService {
      */
     @Transactional
     public void deletePdf(User user, Long pdfUniqueId) throws IOException {
-        // 1️⃣ Récupérer le PDF depuis la base de données
+        // 1 Récupérer le PDF depuis la base de données
         PdfMetadata pdfMetadata = pdfMetadataRepository.findById(pdfUniqueId)
                 .orElseThrow(() -> new IllegalArgumentException("PDF introuvable avec l'ID : " + pdfUniqueId));
 
-        // 3️⃣ Supprimer le fichier du stockage Firebase
+        // 2 Supprimer le fichier du stockage Firebase
         String filePath = pdfMetadata.getFilePath(); // ex: "pdfs/monfichier.pdf"
         firebaseStorageService.deleteFileFromUrl(filePath);
 
-        // 4️⃣ Supprimer les métadonnées en base
+        // 3 Supprimer les métadonnées en base
         pdfMetadataRepository.delete(pdfMetadata);
 
-        // 5️⃣ Loguer l’action utilisateur
-        userActionService.logAction(
+        // 4 Loguer l’action utilisateur
+        UserAction userActionSaved = userActionService.logAction(
                 user,
                 UserAction.TypeAction.SUPPRESSION_PDF,
+                null,
+                null,
+                false,
                 "Suppression du PDF : " + pdfMetadata.getOriginalFilename()
         );
     }

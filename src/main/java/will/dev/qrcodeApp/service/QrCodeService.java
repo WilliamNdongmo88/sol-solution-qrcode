@@ -22,6 +22,7 @@ import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.entity.UserAction;
 import will.dev.qrcodeApp.repository.PdfMetadataRepository;
 import will.dev.qrcodeApp.repository.QrCodeMetadataRepository;
+import will.dev.qrcodeApp.repository.UserActionRepository;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -47,6 +48,7 @@ public class QrCodeService {
     private final EmailService emailService;
     private final BrevoService brevoService;
     private final FirebaseStorageService firebaseStorageService;
+    private final UserActionRepository userActionRepository;
     private final Storage storage;
 
     @Value("${app.qrcode.dir:uploads/qrcodes}")
@@ -58,6 +60,9 @@ public class QrCodeService {
     @Value("${firebase.bucket-name}")
     private String bucketName;
 
+    @Value("${spring.profiles.active}")
+    private String env;
+
     @Transactional
     public QrCodeMetadata generateQrCode(String pdfUniqueId) throws Exception {
         // Vérification que le PDF existe
@@ -67,7 +72,8 @@ public class QrCodeService {
         // Vérification si un QR code existe déjà pour ce PDF et cet utilisateur
         Optional<QrCodeMetadata> existingQrCode = qrCodeMetadataRepository.findByPdfMetadataAndUser(pdfMetadata, pdfMetadata.getUser());
         if (existingQrCode.isPresent()) {
-            userActionService.logAction(pdfMetadata.getUser(), UserAction.TypeAction.GENERATION_QR, "QR Code déjà existant pour le PDF " + pdfUniqueId + ". Retour de l'existant.");
+            userActionService.logAction(pdfMetadata.getUser(), UserAction.TypeAction.GENERATION_QR,
+                    existingQrCode.get(), pdfUniqueId,true,"QR Code déjà existant pour le PDF " + pdfUniqueId + ". Retour de l'existant.");
             return existingQrCode.get();
         }
 
@@ -100,7 +106,19 @@ public class QrCodeService {
         QrCodeMetadata savedQrCode = qrCodeMetadataRepository.save(qrCodeMetadata);
 
         // Enregistrer l'action de génération
-        userActionService.logAction(pdfMetadata.getUser(), UserAction.TypeAction.GENERATION_QR, "QR Code généré pour le PDF " + savedQrCode.getPdfMetadata().getOriginalFilename());
+        userActionService.logAction(pdfMetadata.getUser(),
+                UserAction.TypeAction.GENERATION_QR,
+                savedQrCode,
+                pdfUniqueId,
+                true,
+                "QR Code généré pour le PDF " + savedQrCode.getPdfMetadata().getOriginalFilename());
+
+        //Mise a jour du fichier PDF lié a ce qrCode
+        UserAction userAction = pdfMetadataRepository.findByUniqueIdAndActionType(pdfUniqueId, UserAction.TypeAction.UPLOAD_PDF)
+                .orElseThrow(() -> new IllegalArgumentException("PDF non trouvé avec l'ID unique: " + pdfUniqueId));
+        System.out.println("UserAction: " + userAction);
+        userAction.setIsRelatedToQrCode(true);
+        userActionRepository.save(userAction);
 
         // Envoyer le QR code par email
         try {
@@ -204,7 +222,8 @@ public class QrCodeService {
         if (bucket == null) {
             throw new IOException("❌ Bucket introuvable : " + bucketName);
         }
-        String fullPath = "logos/" + logoFileName;
+        String fullPath = "sol-solution/logos/" + logoFileName;
+
         Blob blob = bucket.get(fullPath);
 
         if (blob == null) {
@@ -238,7 +257,7 @@ public class QrCodeService {
     }
 
     public Boolean checkFile(String fileName) {
-        String folder = "logos";
+        String folder = "sol-solution/logos";
         boolean exists = firebaseStorageService.fileExists(folder, fileName, bucketName);
 
         if (exists) {
@@ -275,12 +294,45 @@ public class QrCodeService {
         userActionService.logAction(
                 user,
                 UserAction.TypeAction.SUPPRESSION_QR,
+                null,
+                null,
+                false,
                 "Suppression du QR Code : " + qrCode.getQrName()
         );
 
         System.out.println("QR Code " + qrCodeId + " et fichier associé supprimés avec succès.");
     }
 
+    @Transactional
+    public void deletePdfFile(User user, String uniquePdfId, Long userAactionId) {
+        // 1. Récupérer les métadonnées pour obtenir l'URL du fichier
+        PdfMetadata pdfMetadata = pdfMetadataRepository.findByUniqueId(uniquePdfId)
+                .orElseThrow(() -> new IllegalArgumentException("PDF non trouvé avec l'ID: " + uniquePdfId));
+
+        // 2. Tenter de supprimer le fichier sur Firebase Storage
+        boolean deletedFromFirebase = firebaseStorageService.deleteFileFromUrl(pdfMetadata.getFilePath());
+
+        if (!deletedFromFirebase) {
+            throw new RuntimeException("Impossible de supprimer le fichier Firebase : " + pdfMetadata.getFilePath());
+        }
+
+        // 3. Si la suppression sur Firebase a réussi, supprimer l'entrée de la base de données
+        pdfMetadataRepository.delete(pdfMetadata);
+
+        userActionService.logAction(
+                user,
+                UserAction.TypeAction.SUPPRESSION_QR,
+                null,
+                null,
+                false,
+                "Suppression du fichier PDF : " + pdfMetadata.getOriginalFilename()
+        );
+
+        UserAction userActionToDelete = userActionRepository.findUserActionById(userAactionId);
+        userActionRepository.delete(userActionToDelete);
+
+        System.out.println("PDF " + pdfMetadata + " et fichier associé supprimés avec succès.");
+    }
 }
 
 

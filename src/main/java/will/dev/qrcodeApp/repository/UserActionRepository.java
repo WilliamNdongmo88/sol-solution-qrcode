@@ -21,6 +21,10 @@ public interface UserActionRepository extends JpaRepository<UserAction, Long> {
 
     List<UserAction> findByTypeAction(UserAction.TypeAction typeAction);
 
+    UserAction findByUniquePdfId(String pdfUniqueId);
+
+    UserAction findUserActionById(Long id);
+
     @Query("SELECT ua FROM UserAction ua WHERE ua.dateAction BETWEEN :startDate AND :endDate")
     List<UserAction> findByDateActionBetween(@Param("startDate") LocalDateTime startDate, 
                                            @Param("endDate") LocalDateTime endDate);

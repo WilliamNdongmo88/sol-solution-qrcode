@@ -2,6 +2,8 @@ CREATE TABLE user_actions (
     id BIGSERIAL PRIMARY KEY,
     utilisateur_id BIGINT NOT NULL,
     qr_code_id BIGINT,
+    unique_pdf_id VARCHAR(255),
+    is_related_to_qr_code BOOLEAN DEFAULT FALSE,
     type_action VARCHAR(50) NOT NULL,
     description TEXT,
     date_action TIMESTAMP,

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import will.dev.qrcodeApp.entity.UserAction;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,10 @@ public interface PdfMetadataRepository extends JpaRepository<PdfMetadata, Long> 
 
     boolean existsByOriginalFilenameAndUser(String originalFilename, User user);
 
-
+    @Query("SELECT ua FROM UserAction ua WHERE ua.uniquePdfId = :uniquePdfId AND ua.typeAction = :typeAction")
+    Optional<UserAction> findByUniqueIdAndActionType(
+            @Param("uniquePdfId") String uniquePdfId,
+            @Param("typeAction") UserAction.TypeAction typeAction
+    );
 }
 

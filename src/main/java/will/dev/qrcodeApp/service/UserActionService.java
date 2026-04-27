@@ -2,6 +2,7 @@ package will.dev.qrcodeApp.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import will.dev.qrcodeApp.entity.QrCodeMetadata;
 import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.entity.UserAction;
 import will.dev.qrcodeApp.repository.UserActionRepository;
@@ -18,8 +19,9 @@ public class UserActionService {
     /**
      * Enregistrer une action utilisateur
      */
-    public UserAction logAction(User utilisateur, UserAction.TypeAction typeAction, String description) {
-        UserAction action = new UserAction(utilisateur, typeAction, description);
+    public UserAction logAction(User utilisateur, UserAction.TypeAction typeAction,
+                                QrCodeMetadata qrCodeMetadata, String pdfUniqueId, Boolean isRelated, String description) {
+        UserAction action = new UserAction(utilisateur, qrCodeMetadata, typeAction, isRelated, pdfUniqueId, description);
         return userActionRepository.save(action);
     }
 

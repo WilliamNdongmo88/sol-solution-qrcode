@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -22,11 +23,18 @@ public class FirebaseStorageService {
     @Value("${firebase.bucket-name}")
     private String bucketName;
 
+    @Value("${spring.profiles.active}")
+    private String env;
+
     private final Storage storage;
 
     public String uploadFile(MultipartFile file, String uniqueId) throws IOException {
-        String destinationPath = "pdfs/" + uniqueId + ".pdf";
-
+        String destinationPath = "";
+        if(Objects.equals(env, "dev")) {
+            destinationPath = "sol-solution/dev/pdfs/" + uniqueId + ".pdf";
+        } else if (Objects.equals(env, "prod")) {
+            destinationPath = "sol-solution/prod/pdfs/" + uniqueId + ".pdf";
+        }
         storage.create(
                 com.google.cloud.storage.BlobInfo.newBuilder(bucketName, destinationPath)
                         .setContentType(file.getContentType())
@@ -38,7 +46,7 @@ public class FirebaseStorageService {
     }
 
     public String uploadLogo(byte[] imageBytes, String name) throws IOException {
-        String destinationPath = "logos/" + name;
+        String destinationPath = "sol-solution/logos/" + name;
 
         BlobId blobId = BlobId.of(bucketName, destinationPath);
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
@@ -53,7 +61,12 @@ public class FirebaseStorageService {
     }
 
     public String uploadImage(byte[] imageBytes, String uniqueId) throws IOException {
-        String destinationPath = "qrcodes/" + uniqueId + ".png";
+        String destinationPath = "";
+        if(Objects.equals(env, "dev")) {
+            destinationPath = "sol-solution/dev/qrcodes/"  + uniqueId + ".png";
+        } else if (Objects.equals(env, "prod")) {
+            destinationPath = "sol-solution/prod/qrcodes/" + uniqueId + ".png";
+        }
 
         BlobId blobId = BlobId.of(bucketName, destinationPath);
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId)

@@ -1,12 +1,8 @@
 package will.dev.qrcodeApp.controller;
 
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.Bucket;
-import com.google.firebase.cloud.StorageClient;
 import com.google.zxing.WriterException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.client.RestTemplate;
-import will.dev.qrcodeApp.config.FirebaseInitializer;
 import will.dev.qrcodeApp.dto.QrCodeGenerationResponse;
 import will.dev.qrcodeApp.entity.QrCodeMetadata;
 import will.dev.qrcodeApp.service.QrCodeService;
@@ -18,12 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.Optional;
 
 @RestController

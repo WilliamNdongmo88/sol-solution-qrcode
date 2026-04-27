@@ -112,6 +112,17 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/pdfs/{uniquePdfId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    public ResponseEntity<?> deletePdfFile(@PathVariable String uniquePdfId, @RequestBody Map<String, Object> payload) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Long userAactionId = Long.valueOf(payload.get("actionId").toString());
+        qrCodeService.deletePdfFile(user, uniquePdfId, userAactionId);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "QR Code supprimé avec succès");
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/qrcodes")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
     public ResponseEntity<List<QrCodeMetadataDto>> getAllQrCodes() {

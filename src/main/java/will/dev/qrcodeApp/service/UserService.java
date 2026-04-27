@@ -55,7 +55,11 @@ public class UserService {
         user = userRepository.save(user);
 
         // Enregistrer l'action de création
-        userActionService.logAction(user, UserAction.TypeAction.CREATION_COMPTE,
+        userActionService.logAction(user,
+                UserAction.TypeAction.CREATION_COMPTE,
+                null,
+                null,
+                false,
                 "Compte créé pour: " + user.getEmail() + " avec le rôle: " + user.getRole());
 
         return user;
@@ -84,7 +88,7 @@ public class UserService {
         user = userRepository.save(user);
 
         // Enregistrer l'action
-        userActionService.logAction(user, UserAction.TypeAction.CHANGEMENT_ROLE,
+        userActionService.logAction(user, UserAction.TypeAction.CHANGEMENT_ROLE,null,null,false,
                 "Changement de rôle de " + oldRole + " vers " + newRole + " pour l'utilisateur " + user.getEmail());
 
         return user;
@@ -106,7 +110,7 @@ public class UserService {
         UserAction.TypeAction actionType = user.getActif() ?
                 UserAction.TypeAction.ACTIVATION_COMPTE : UserAction.TypeAction.DESACTIVATION_COMPTE;
 
-        userActionService.logAction(user, actionType,
+        userActionService.logAction(user, actionType,null,null, false,
                 (user.getActif() ? "Activation" : "Désactivation") + " du compte " + user.getEmail());
 
         brevoService.sendStatusChangeNotification(user, user.getActif());
@@ -153,7 +157,8 @@ public class UserService {
         user = userRepository.save(user);
 
         // Enregistrer l'action
-        userActionService.logAction(user, UserAction.TypeAction.MODIFICATION_PROFIL,
+        userActionService.logAction(user, UserAction.TypeAction.MODIFICATION_PROFIL,null,null,
+                false,
                 "Modification du profil utilisateur");
 
         return user;

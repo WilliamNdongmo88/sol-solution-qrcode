@@ -17,6 +17,7 @@ public class UserActionMapper {
         dto.setTypeAction(userAction.getTypeAction());
         dto.setDescription(userAction.getDescription());
         dto.setDateAction(userAction.getDateAction());
+        dto.setIsRelatedToQrCode(userAction.getIsRelatedToQrCode());
 
         // Relation utilisateur
         if (userAction.getUtilisateur() != null) {
@@ -25,9 +26,12 @@ public class UserActionMapper {
         }
 
         // Relation qrCodeMetadata (si tu as besoin de l’ajouter)
-//        if (userAction.getQrCodeMetadata() != null) {
-//            dto.setQrCodeId(userAction.getQrCodeMetadata().getId());
-//        }
+        if (userAction.getQrCode() != null) {
+            dto.setQrcodeId(userAction.getQrCode().getId());
+        }
+        if (userAction.getUniquePdfId() != null) {
+            dto.setUniquePdfId(userAction.getUniquePdfId());
+        }
 
         return dto;
     }

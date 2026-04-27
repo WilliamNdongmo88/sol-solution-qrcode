@@ -258,7 +258,7 @@ public class BrevoService {
             apiKeyAuth.setApiKey(apiKey);
 
             // 2️⃣ Instanciation de l’API TransactionalEmailsApi
-            TransactionalEmailsApi emailApi = new TransactionalEmailsApi();
+            TransactionalEmailsApi emailApi = new TransactionalEmailsApi(defaultClient);
 
             // 3️⃣ Création du contenu du mail
             String subject = "Réinitialisation de votre mot de passe - " + senderName ;

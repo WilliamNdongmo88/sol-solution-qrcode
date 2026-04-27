@@ -42,7 +42,7 @@ public class DataInitializer implements CommandLineRunner {
             User admin = new User();
             admin.setNom("Admin SSAC");
             admin.setEmail("williamndongmo899@gmail.com");
-            admin.setPassword(passwordEncoder.encode("Will123"));
+            admin.setPassword(passwordEncoder.encode("Will@fr000"));
             admin.setRole(User.Role.ADMIN);
             admin.setActif(true);
             admin.setDateCreation(LocalDateTime.now());
@@ -51,30 +51,30 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // Créer le manager par défaut si n'existe pas
-        if (userRepository.findByEmail("ndonwill1@gmail.com").isEmpty()) {
-            User manager = new User();
-            manager.setNom("Manager SSAC");
-            manager.setEmail("ndonwill1@gmail.com");
-            manager.setPassword(passwordEncoder.encode("Will123"));
-            manager.setRole(User.Role.MANAGER);
-            manager.setActif(true);
-            manager.setDateCreation(LocalDateTime.now());
-            userRepository.save(manager);
-            System.out.println("Manager par défaut créé.");
-        }
+//        if (userRepository.findByEmail("ndonwill1@gmail.com").isEmpty()) {
+//            User manager = new User();
+//            manager.setNom("Manager SSAC");
+//            manager.setEmail("ndonwill1@gmail.com");
+//            manager.setPassword(passwordEncoder.encode("Will123"));
+//            manager.setRole(User.Role.MANAGER);
+//            manager.setActif(true);
+//            manager.setDateCreation(LocalDateTime.now());
+//            userRepository.save(manager);
+//            System.out.println("Manager par défaut créé.");
+//        }
 
         // Créer l'utilisateur de test par défaut si n'existe pas
-        if (userRepository.findByEmail("ndonwill2@gmail.com").isEmpty()) {
-            User user = new User();
-            user.setNom("User Test");
-            user.setEmail("ndonwill2@gmail.com");
-            user.setCodeAcces("WILL123"); // Code d'accès pour l'utilisateur
-            user.setRole(User.Role.USER);
-            user.setActif(true);
-            user.setDateCreation(LocalDateTime.now());
-            userRepository.save(user);
-            System.out.println("Utilisateur de test par défaut créé.");
-        }
+//        if (userRepository.findByEmail("ndonwill2@gmail.com").isEmpty()) {
+//            User user = new User();
+//            user.setNom("User Test");
+//            user.setEmail("ndonwill2@gmail.com");
+//            user.setCodeAcces("WILL123"); // Code d'accès pour l'utilisateur
+//            user.setRole(User.Role.USER);
+//            user.setActif(true);
+//            user.setDateCreation(LocalDateTime.now());
+//            userRepository.save(user);
+//            System.out.println("Utilisateur de test par défaut créé.");
+//        }
 
         // Initialisation existante
 //        System.out.println("Initialisation des données...");
