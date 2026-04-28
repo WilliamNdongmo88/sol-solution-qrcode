@@ -8,7 +8,6 @@ import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.entity.UserAction;
 import will.dev.qrcodeApp.repository.UserRepository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;

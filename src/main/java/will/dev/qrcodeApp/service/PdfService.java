@@ -17,6 +17,7 @@ import will.dev.qrcodeApp.entity.User;
 import will.dev.qrcodeApp.entity.UserAction;
 import will.dev.qrcodeApp.repository.PdfMetadataRepository;
 import will.dev.qrcodeApp.repository.UserActionRepository;
+import will.dev.qrcodeApp.repository.UserRepository;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,11 +40,19 @@ public class PdfService {
     private final PdfMetadataRepository pdfMetadataRepository;
     private final UserActionService userActionService;
     private final UserActionRepository userActionRepository;
+    private final UserRepository userRepository;
     private final FirebaseStorageService firebaseStorageService;
     private final Storage storage;
 
     @Transactional
     public PdfMetadata uploadPdf(User user, MultipartFile file) throws IOException {
+        // Vérification si user actif
+        User existingUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        if (!existingUser.getActif()) {
+            throw new IllegalArgumentException("❌ Compte désactivé.");
+        }
+
         // Vérification du fichier
         if (file.isEmpty()) {
             throw new IllegalArgumentException("❌ Le fichier est vide.");

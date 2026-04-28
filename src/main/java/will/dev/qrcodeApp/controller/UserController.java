@@ -35,7 +35,7 @@ public class UserController {
     private final QrCodeMetadataMapper qrCodeMetadataMapper;
 
     @GetMapping("/profile")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<UserDto> getUserProfile(@AuthenticationPrincipal User user) {
         try {
             return ResponseEntity.ok(userMapper.userToUserDto(user));
@@ -44,7 +44,7 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<UserDto> updateUserProfile(@AuthenticationPrincipal User user,
                                                 @RequestBody UpdateProfileRequest request) {
         try{
@@ -56,7 +56,7 @@ public class UserController {
     }
 
     @GetMapping("/actions")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<List<UserActionDto>> getUserActions(@AuthenticationPrincipal User user) {
         List<UserActionDto> actions = userActionService.getUserActions(user.getId())
                 .stream().map(userActionMapper::userActionToUserActionDto).collect(Collectors.toList());
@@ -64,7 +64,7 @@ public class UserController {
     }
 
     @GetMapping("/qrcodes")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<List<QrCodeMetadataDto>> getUserQrCodes(@AuthenticationPrincipal User user) {
         List<QrCodeMetadataDto> qrCodes = qrCodeMetadataRepository.findByUserOrderByGenerationDateDesc(user)
                 .stream().map(qrCodeMetadataMapper::qrCodeMetadataToQrCodeMetadataDto).collect(Collectors.toList());
@@ -72,7 +72,7 @@ public class UserController {
     }
 
     @GetMapping("/pdfs")
-    @PreAuthorize("hasAnyAuthority(\'USER\', \'MANAGER\', \'ADMIN\')")
+    @PreAuthorize("hasAnyAuthority('USER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<List<PdfMetadataDto>> getUserPdfs(@AuthenticationPrincipal User user) {
         List<PdfMetadataDto> pdfs = pdfMetadataRepository.findByUserOrderByUploadDateDesc(user)
                 .stream().map(pdfMetadataMapper::pdfMetadataToPdfMetadataDto).collect(Collectors.toList());

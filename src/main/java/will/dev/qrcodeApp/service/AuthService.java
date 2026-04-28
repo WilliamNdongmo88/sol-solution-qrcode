@@ -39,17 +39,25 @@ public class AuthService {
     }
 
     public String authenticateUserWithCode(String email, String codeAcces) {
+
         System.out.println("email::" + email);
         System.out.println("codeAcces::" + codeAcces);
-        Optional<User> userOpt = userRepository.findByEmailAndCodeAcces(email, codeAcces);
-        System.out.println("userOpt::" + userOpt.get());
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (user.getActif() && user.getRole() == User.Role.USER) {
-                return jwtService.generateToken(user);
-            }
+
+        User user = userRepository.findByEmailAndCodeAcces(email, codeAcces)
+                .orElseThrow(() -> new RuntimeException("Email ou code d'accès invalide"));
+
+        // Vérification actif
+        if (!user.getActif()) {
+            throw new RuntimeException("Votre compte a été désactivé veuillez contacter l'administrateur");
         }
-        throw new RuntimeException("Email ou code d'accès invalide");
+
+        // Vérification rôle
+        if (user.getRole() != User.Role.USER) {
+            throw new RuntimeException("Accès refusé pour ce rôle");
+        }
+
+        // Génération du token
+        return jwtService.generateToken(user);
     }
 
     public void generateAndSendAccessCode(String email) {
