@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import will.dev.qrcodeApp.config.BatchConfig;
 import will.dev.qrcodeApp.dto.*;
 import will.dev.qrcodeApp.entity.RefreshToken;
 import will.dev.qrcodeApp.entity.User;
@@ -33,6 +34,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
+    private final BatchConfig batchConfig;
 
     @PostMapping("/register")
     public ResponseEntity<LoginResponse> register(@RequestBody RegisterRequest request) {
@@ -148,8 +150,15 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout() {
         // Rien à faire côté backend car JWT est stateless
+        batchConfig.runUserActionsJob();
         return ResponseEntity.ok().build();
     }
+
+//    @PostMapping("/batch")
+//    public String testBatch() {
+//        batchConfig.runUserActionsJob();
+//        return "Batch exécuté avec succès";
+//    }
 }
 
 

@@ -1,5 +1,8 @@
 package will.dev.qrcodeApp.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,6 +37,16 @@ public interface UserActionRepository extends JpaRepository<UserAction, Long> {
     @Query("SELECT COUNT(ua) FROM UserAction ua WHERE ua.utilisateur.id = :utilisateurId AND ua.typeAction = :typeAction")
     long countByUtilisateurIdAndTypeAction(@Param("utilisateurId") Long utilisateurId, 
                                          @Param("typeAction") UserAction.TypeAction typeAction);
+
+    @Query("""
+        SELECT ua FROM UserAction ua
+        LEFT JOIN FETCH ua.utilisateur
+        LEFT JOIN FETCH ua.qrCodeMetadata
+    """)
+    Page<UserAction> findAllWithRelations(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"utilisateur", "qrCodeMetadata"})
+    Page<UserAction> findAll(Pageable pageable);
 }
 
 

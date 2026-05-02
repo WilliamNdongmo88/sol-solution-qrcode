@@ -20,7 +20,9 @@ import sibApi.TransactionalEmailsApi;
 import sibModel.*;
 import will.dev.qrcodeApp.entity.User;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Base64;
 import java.util.Collections;
@@ -295,4 +297,92 @@ public class BrevoService {
             e.printStackTrace();
         }
     }
+
+    public void sendEmailWithAttachment(String to,
+                                        String subject,
+                                        String body,
+                                        byte[] pdfBytes,
+                                        String attachmentName) {
+        try {
+            // Configuration du client API
+            ApiClient defaultClient = Configuration.getDefaultApiClient();
+            ApiKeyAuth apiKeyAuth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
+            apiKeyAuth.setApiKey(apiKey);
+
+            TransactionalEmailsApi emailApi = new TransactionalEmailsApi(defaultClient);
+
+            // Préparation de l'email
+            SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
+            sendSmtpEmail.setSender(new SendSmtpEmailSender()
+                    .email(senderEmail)
+                    .name(senderName));
+            sendSmtpEmail.setTo(Collections.singletonList(new SendSmtpEmailTo().email(to)));
+            sendSmtpEmail.setSubject(subject);
+            sendSmtpEmail.setHtmlContent(body);
+
+            // L'API Brevo attend un byte[] Base64, pas un String.
+            SendSmtpEmailAttachment brevoAttachment = new SendSmtpEmailAttachment();
+            brevoAttachment.setName(attachmentName);
+            brevoAttachment.setContent(pdfBytes);
+
+            sendSmtpEmail.setAttachment(Collections.singletonList(brevoAttachment));
+
+            // Envoi de l'email
+            emailApi.sendTransacEmail(sendSmtpEmail);
+            System.out.println("✅ Email envoyé avec succès à " + to + " via Brevo.");
+
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de l’envoi du mail Brevo : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Envoie un email avec une pièce jointe PDF.
+     * Version compatible avec le SDK exigeant un byte[] pour setContent.
+     */
+//    public void sendEmailWithAttachment(String recipientEmail, String subject, String body, byte[] pdfBytes, String attachmentName) {
+//        try {
+//            ApiClient defaultClient = Configuration.getDefaultApiClient();
+//            ApiKeyAuth apiKeyAuth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
+//            apiKeyAuth.setApiKey(apiKey);
+//
+//            TransactionalEmailsApi apiInstance = new TransactionalEmailsApi();
+//
+//            SendSmtpEmailTo toItem = new SendSmtpEmailTo();
+//            toItem.setEmail(recipientEmail);
+//
+//            SendSmtpEmailSender sender = new SendSmtpEmailSender();
+//            sender.setEmail(senderEmail);
+//            sender.setName("Smart Invite");
+//
+//            SendSmtpEmailAttachment attachment = new SendSmtpEmailAttachment();
+//            attachment.setName(attachmentName);
+//
+//            /**
+//             * SOLUTION POUR LE TYPE byte[] :
+//             * Si votre SDK demande un byte[], il attend généralement les octets BRUTS du PDF,
+//             * car il se charge lui-même de l'encodage Base64 lors de la conversion en JSON.
+//             *
+//             * Si vous envoyez les octets d'une chaîne déjà encodée en Base64,
+//             * Brevo va ré-encoder ce Base64, créant un "double encodage" qui rend le PDF illisible.
+//             */
+//            attachment.setContent(pdfBytes); // On passe directement les octets bruts du PDF
+//
+//            SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
+//            sendSmtpEmail.setTo(Collections.singletonList(toItem));
+//            sendSmtpEmail.setSender(sender);
+//            sendSmtpEmail.setSubject(subject);
+//            sendSmtpEmail.setHtmlContent(body);
+//            sendSmtpEmail.setAttachment(Collections.singletonList(attachment));
+//
+//            apiInstance.sendTransacEmail(sendSmtpEmail);
+//            System.out.println("✅ Email envoyé avec succès à : " + recipientEmail);
+//
+//        } catch (Exception e) {
+//            System.err.println("❌ Erreur Brevo : " + e.getMessage());
+//            e.printStackTrace();
+//        }
+//    }
+
 }
