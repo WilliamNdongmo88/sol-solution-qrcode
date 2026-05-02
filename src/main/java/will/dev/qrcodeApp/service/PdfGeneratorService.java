@@ -4,17 +4,23 @@ import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import will.dev.qrcodeApp.entity.QrCodeMetadata;
 import will.dev.qrcodeApp.entity.UserAction;
+import will.dev.qrcodeApp.repository.QrCodeMetadataRepository;
 
 import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.List;
-import java.util.Date;
 
 @Service
+@RequiredArgsConstructor
 public class PdfGeneratorService {
+
+    private final QrCodeMetadataRepository qrCodeMetadataRepository;
 
     public byte[] generateUserActionsPdf(List<UserAction> userActions) throws DocumentException{
         // Utilisation d'un bloc try-catch-finally pour garantir la fermeture des ressources
@@ -50,7 +56,7 @@ public class PdfGeneratorService {
             document.add(new Paragraph("\n"));
 
             // Table
-            PdfPTable table = new PdfPTable(8);
+            PdfPTable table = new PdfPTable(9);
             table.setWidthPercentage(100);
             addTableHeader(table);
 
@@ -60,6 +66,15 @@ public class PdfGeneratorService {
                 table.addCell(action.getQrCode() != null ? safe(action.getQrCode().getId()) : "N/A");
                 table.addCell(safe(action.getUniquePdfId()));
                 table.addCell(safe(action.getIsRelatedToQrCode()));
+
+                String filePath = "N/A";
+                if (action.getQrCode() != null && action.getQrCode().getId() != null) {
+                    filePath = qrCodeMetadataRepository.findById(action.getQrCode().getId())
+                            .map(QrCodeMetadata::getFilePath)
+                            .orElse("N/A");
+                }
+                table.addCell(filePath);
+
                 table.addCell(safe(action.getTypeAction()));
                 table.addCell(safe(action.getDescription()));
                 table.addCell(action.getDateAction() != null
@@ -100,7 +115,7 @@ public class PdfGeneratorService {
     }
 
     private void addTableHeader(PdfPTable table) {
-        String[] headers = {"ID", "Utilisateur ID", "QR Code ID", "PDF ID", "Lié au QR", "Type Action", "Description", "Date Action"};
+        String[] headers = {"ID", "Utilisateur ID", "QR Code ID", "PDF ID", "Lié au QR", "Lien Du QrCode", "Type Action", "Description", "Date Action"};
         Font font = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, BaseColor.WHITE);
 
         for (String header : headers) {

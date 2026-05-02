@@ -311,6 +311,19 @@ public class BrevoService {
 
             TransactionalEmailsApi emailApi = new TransactionalEmailsApi(defaultClient);
 
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            // Créer le contexte pour le template
+            Context context = new Context();
+            context.setVariable("userName", to);
+            context.setVariable("title", "Rapport de transactions utilisateurs");
+            context.setVariable("appName", senderName);
+
+            // Générer le contenu HTML
+            String htmlContent = templateEngine.process("rapport-actions", context);
+            helper.setText(htmlContent, true);
+
             // Préparation de l'email
             SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
             sendSmtpEmail.setSender(new SendSmtpEmailSender()
@@ -318,7 +331,7 @@ public class BrevoService {
                     .name(senderName));
             sendSmtpEmail.setTo(Collections.singletonList(new SendSmtpEmailTo().email(to)));
             sendSmtpEmail.setSubject(subject);
-            sendSmtpEmail.setHtmlContent(body);
+            sendSmtpEmail.setHtmlContent(htmlContent);
 
             // L'API Brevo attend un byte[] Base64, pas un String.
             SendSmtpEmailAttachment brevoAttachment = new SendSmtpEmailAttachment();

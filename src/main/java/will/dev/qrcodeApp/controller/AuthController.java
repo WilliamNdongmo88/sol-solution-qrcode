@@ -154,11 +154,11 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-//    @PostMapping("/batch")
-//    public String testBatch() {
-//        batchConfig.runUserActionsJob();
-//        return "Batch exécuté avec succès";
-//    }
+    @PostMapping("/batch")
+    public String testBatch() {
+        batchConfig.runUserActionsJob();
+        return "Batch exécuté avec succès";
+    }
 }
 
 

@@ -99,7 +99,7 @@ public class BatchConfig {
                 brevoService.sendEmailWithAttachment(recipientEmail, subject, body, pdfBytes, attachmentName);
 
                 // Vider la table après l\"envoi du PDF
-                userActionRepository.deleteAll();
+                //userActionRepository.deleteAll();
                 System.out.println("✅ Table user_actions vidée avec succès.");
 
             } catch (DocumentException e) {
